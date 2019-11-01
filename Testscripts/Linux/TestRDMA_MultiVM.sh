@@ -439,27 +439,29 @@ function Main() {
 	slaves_array=$(echo ${slaves} | tr ',' ' ')
 	nbc_benchmarks="Ibcast Iallgather Iallgatherv Igather Igatherv Iscatter Iscatterv Ialltoall Ialltoallv Ireduce Ireduce_scatter Iallreduce Ibarrier"
 
-	# [pkey code moved from SetupRDMA.sh to TestRDMA_MultiVM.sh]
-	# It's safer to obtain pkeys in the test script because some distros
-	# may require a reboot after the IB setup is completed
-	# Find the correct partition key for IB communicating with other VM
-	if [ -z ${MPI_IB_PKEY+x} ]; then
-		firstkey=$(cat /sys/class/infiniband/mlx5_0/ports/1/pkeys/0)
-		LogMsg "Getting the first key $firstkey"
-		secondkey=$(cat /sys/class/infiniband/mlx5_0/ports/1/pkeys/1)
-		LogMsg "Getting the second key $secondkey"
+	if [[ "$endure_sku" == "no" ]];then
+		# [pkey code moved from SetupRDMA.sh to TestRDMA_MultiVM.sh]
+		# It's safer to obtain pkeys in the test script because some distros
+		# may require a reboot after the IB setup is completed
+		# Find the correct partition key for IB communicating with other VM
+		if [ -z ${MPI_IB_PKEY+x} ]; then
+			firstkey=$(cat /sys/class/infiniband/mlx5_0/ports/1/pkeys/0)
+			LogMsg "Getting the first key $firstkey"
+			secondkey=$(cat /sys/class/infiniband/mlx5_0/ports/1/pkeys/1)
+			LogMsg "Getting the second key $secondkey"
 
-		# Assign the bigger number to MPI_IB_PKEY
-		if [ $((firstkey - secondkey)) -gt 0 ]; then
-			export MPI_IB_PKEY=$firstkey
-			echo "MPI_IB_PKEY=$firstkey" >> /root/constants.sh
+			# Assign the bigger number to MPI_IB_PKEY
+			if [ $((firstkey - secondkey)) -gt 0 ]; then
+				export MPI_IB_PKEY=$firstkey
+				echo "MPI_IB_PKEY=$firstkey" >> /root/constants.sh
+			else
+				export MPI_IB_PKEY=$secondkey
+				echo "MPI_IB_PKEY=$secondkey" >> /root/constants.sh
+			fi
+			LogMsg "Setting MPI_IB_PKEY to $MPI_IB_PKEY and copying it into constants.sh file"
 		else
-			export MPI_IB_PKEY=$secondkey
-			echo "MPI_IB_PKEY=$secondkey" >> /root/constants.sh
+			LogMsg "pkey is already present in constants.sh"
 		fi
-		LogMsg "Setting MPI_IB_PKEY to $MPI_IB_PKEY and copying it into constants.sh file"
-	else
-		LogMsg "pkey is already present in constants.sh"
 	fi
 
 	for vm in $master $slaves_array; do
@@ -499,6 +501,9 @@ function Main() {
 	# mlx5_ib, rdma_cm, rdma_ucm, ib_ipoib shall be loaded in kernel
 	final_module_load_status=0
 	kernel_modules="mlx5_ib rdma_cm rdma_ucm ib_ipoib"
+	if [[ "$endure_sku" == "yes" ]];then
+		kernel_modules="rdma_cm rdma_ucm ib_ipoib"
+	fi
 
 	for vm in $master $slaves_array; do
 	LogMsg "Checking kernel modules in $vm"
@@ -517,42 +522,44 @@ function Main() {
 		done
 	done
 
-	# ############################################################################################################
-	# ibv_devinfo verifies PORT STATE
-	# PORT_ACTIVE (4) is expected. If PORT_DOWN (1), it fails
-	ib_port_state_down_cnt=0
-	min_port_state_up_cnt=0
-	for vm in $master $slaves_array; do
-		min_port_state_up_cnt=$(($min_port_state_up_cnt + 1))
-		ssh root@${vm} "ibv_devinfo > /root/IMB-PORT_STATE_${vm}.txt"
-		port_state=$(ssh root@${vm} "ibv_devinfo | grep -i state")
-		port_state=$(echo $port_state | cut -d ' ' -f2)
-		if [ "$port_state" == "PORT_ACTIVE" ]; then
-			LogMsg "$vm ib port is up - Succeeded; $port_state"
-		else
-			LogErr "$vm ib port is down; $port_state"
-			LogErr "Will remove the VM with bad port from constants.sh"
-			sed -i "s/${vm},\|,${vm}//g" ${__LIS_CONSTANTS_FILE}
-			ib_port_state_down_cnt=$(($ib_port_state_down_cnt + 1))
-		fi
-	done
-	min_port_state_up_cnt=$((min_port_state_up_cnt / 2))
-	# If half of the VMs (or more) are affected, the test will fail
-	if [ $ib_port_state_down_cnt -ge $min_port_state_up_cnt ]; then
-		LogErr "IMB-MPI1 ib port state check failed in $ib_port_state_down_cnt VMs. Aborting further tests."
-		SetTestStateFailed
-		Collect_Logs
-		LogMsg "INFINIBAND_VERIFICATION_FAILED_MPI1_PORTSTATE"
-		exit 0
-	else
-		LogMsg "INFINIBAND_VERIFICATION_SUCCESS_MPI1_PORTSTATE"
-	fi
-	# Refresh slave array and total_virtual_machines
-	if [ $ib_port_state_down_cnt -gt 0 ]; then
-		. ${__LIS_CONSTANTS_FILE}
-		slaves_array=$(echo ${slaves} | tr ',' ' ')
-		total_virtual_machines=$(($total_virtual_machines - $ib_port_state_down_cnt))
+	if [[ "$endure_sku" == "no" ]];then
+		# ############################################################################################################
+		# ibv_devinfo verifies PORT STATE
+		# PORT_ACTIVE (4) is expected. If PORT_DOWN (1), it fails
 		ib_port_state_down_cnt=0
+		min_port_state_up_cnt=0
+		for vm in $master $slaves_array; do
+			min_port_state_up_cnt=$(($min_port_state_up_cnt + 1))
+			ssh root@${vm} "ibv_devinfo > /root/IMB-PORT_STATE_${vm}.txt"
+			port_state=$(ssh root@${vm} "ibv_devinfo | grep -i state")
+			port_state=$(echo $port_state | cut -d ' ' -f2)
+			if [ "$port_state" == "PORT_ACTIVE" ]; then
+				LogMsg "$vm ib port is up - Succeeded; $port_state"
+			else
+				LogErr "$vm ib port is down; $port_state"
+				LogErr "Will remove the VM with bad port from constants.sh"
+				sed -i "s/${vm},\|,${vm}//g" ${__LIS_CONSTANTS_FILE}
+				ib_port_state_down_cnt=$(($ib_port_state_down_cnt + 1))
+			fi
+		done
+		min_port_state_up_cnt=$((min_port_state_up_cnt / 2))
+		# If half of the VMs (or more) are affected, the test will fail
+		if [ $ib_port_state_down_cnt -ge $min_port_state_up_cnt ]; then
+			LogErr "IMB-MPI1 ib port state check failed in $ib_port_state_down_cnt VMs. Aborting further tests."
+			SetTestStateFailed
+			Collect_Logs
+			LogMsg "INFINIBAND_VERIFICATION_FAILED_MPI1_PORTSTATE"
+			exit 0
+		else
+			LogMsg "INFINIBAND_VERIFICATION_SUCCESS_MPI1_PORTSTATE"
+		fi
+		# Refresh slave array and total_virtual_machines
+		if [ $ib_port_state_down_cnt -gt 0 ]; then
+			. ${__LIS_CONSTANTS_FILE}
+			slaves_array=$(echo ${slaves} | tr ',' ' ')
+			total_virtual_machines=$(($total_virtual_machines - $ib_port_state_down_cnt))
+			ib_port_state_down_cnt=0
+		fi
 	fi
 
 	# ############################################################################################################
@@ -599,61 +606,63 @@ function Main() {
 	# Refresh $slaves_array with healthy node
 	slaves_array=$(cat /root/tmp_slaves_array.txt)
 
-	# ############################################################################################################
-	# Verify ibv_rc_pingpong, ibv_uc_pingpong and ibv_ud_pingpong and rping.
-	final_pingpong_state=0
+	if [[ "$endure_sku" == "no" ]];then
+		# ############################################################################################################
+		# Verify ibv_rc_pingpong, ibv_uc_pingpong and ibv_ud_pingpong and rping.
+		final_pingpong_state=0
 
-	# Define ibv_ pingpong commands in the array
-	declare -a ping_cmds=("ibv_rc_pingpong" "ibv_uc_pingpong" "ibv_ud_pingpong")
+		# Define ibv_ pingpong commands in the array
+		declare -a ping_cmds=("ibv_rc_pingpong" "ibv_uc_pingpong" "ibv_ud_pingpong")
 
-	for ping_cmd in "${ping_cmds[@]}"; do
-		for vm1 in $master $slaves_array; do
-			for vm2 in $slaves_array $master; do
-				if [[ "$vm1" == "$vm2" ]]; then
-					# Skip self-ping test case
-					break
-				fi
-				# Define pingpong test log file name
-				log_file=IMB-"$ping_cmd"-output-$vm1-$vm2.txt
-				LogMsg "Run $ping_cmd from $vm2 to $vm1"
-				LogMsg "  Start $ping_cmd in server VM $vm1 first"
-				retries=0
-				while [ $retries -lt 3 ]; do
-					ssh root@${vm1} "$ping_cmd" &
-					sleep 1
-					LogMsg "  Start $ping_cmd in client VM $vm2"
-					ssh root@${vm2} "$ping_cmd $vm1 > /root/$log_file"
-					pingpong_state=$?
+		for ping_cmd in "${ping_cmds[@]}"; do
+			for vm1 in $master $slaves_array; do
+				for vm2 in $slaves_array $master; do
+					if [[ "$vm1" == "$vm2" ]]; then
+						# Skip self-ping test case
+						break
+					fi
+					# Define pingpong test log file name
+					log_file=IMB-"$ping_cmd"-output-$vm1-$vm2.txt
+					LogMsg "Run $ping_cmd from $vm2 to $vm1"
+					LogMsg "  Start $ping_cmd in server VM $vm1 first"
+					retries=0
+					while [ $retries -lt 3 ]; do
+						ssh root@${vm1} "$ping_cmd" &
+						sleep 1
+						LogMsg "  Start $ping_cmd in client VM $vm2"
+						ssh root@${vm2} "$ping_cmd $vm1 > /root/$log_file"
+						pingpong_state=$?
 
-					sleep 1
-					scp root@${vm2}:/root/$log_file .
-					pingpong_result=$(cat $log_file | grep -i Mbit | cut -d ' ' -f7)
-					if [ $pingpong_state -eq 0 ] && [ $pingpong_result > 0 ]; then
-						LogMsg "$ping_cmd test execution successful"
-						LogMsg "$ping_cmd result $pingpong_result in $vm1-$vm2 - Succeeded."
-						retries=4
-					else
-						sleep 10
-						let retries=retries+1
+						sleep 1
+						scp root@${vm2}:/root/$log_file .
+						pingpong_result=$(cat $log_file | grep -i Mbit | cut -d ' ' -f7)
+						if [ $pingpong_state -eq 0 ] && [ $pingpong_result > 0 ]; then
+							LogMsg "$ping_cmd test execution successful"
+							LogMsg "$ping_cmd result $pingpong_result in $vm1-$vm2 - Succeeded."
+							retries=4
+						else
+							sleep 10
+							let retries=retries+1
+						fi
+					done
+					if [ $pingpong_state -ne 0 ] || (($(echo "$pingpong_result <= 0" | bc -l))); then
+						LogErr "$ping_cmd test execution failed"
+						LogErr "$ping_cmd result $pingpong_result in $vm1-$vm2 - Failed"
+						final_pingpong_state=$(($final_pingpong_state + 1))
 					fi
 				done
-				if [ $pingpong_state -ne 0 ] || (($(echo "$pingpong_result <= 0" | bc -l))); then
-					LogErr "$ping_cmd test execution failed"
-					LogErr "$ping_cmd result $pingpong_result in $vm1-$vm2 - Failed"
-					final_pingpong_state=$(($final_pingpong_state + 1))
-				fi
 			done
 		done
-	done
 
-	if [ $final_pingpong_state -ne 0 ]; then
-		LogErr "ibv_ping_pong test failed in some VMs. Aborting further tests."
-		SetTestStateFailed
-		Collect_Logs
-		LogErr "INFINIBAND_VERIFICATION_FAILED_IBV_PINGPONG"
-		exit 0
-	else
-		LogMsg "INFINIBAND_VERIFICATION_SUCCESS_IBV_PINGPONG"
+		if [ $final_pingpong_state -ne 0 ]; then
+			LogErr "ibv_ping_pong test failed in some VMs. Aborting further tests."
+			SetTestStateFailed
+			Collect_Logs
+			LogErr "INFINIBAND_VERIFICATION_FAILED_IBV_PINGPONG"
+			exit 0
+		else
+			LogMsg "INFINIBAND_VERIFICATION_SUCCESS_IBV_PINGPONG"
+		fi
 	fi
 
 	non_shm_mpi_settings=$(echo $mpi_settings | sed 's/shm://')
@@ -707,9 +716,13 @@ function Main() {
 
 	# Run all benchmarks
 	Run_IMB_Intranode
-	Run_IMB_MPI1
-	Run_IMB_RMA
-	Run_IMB_NBC
+
+	if [[ "$short_testpass" == "no" ]];then
+		Run_IMB_MPI1
+		Run_IMB_RMA
+		Run_IMB_NBC
+	fi
+
 	# Sometimes IMB-P2P and IMB-IO aren't available, skip them if it's the case
 	if [ ! -z "$imb_p2p_path" ]; then
 		Run_IMB_P2P

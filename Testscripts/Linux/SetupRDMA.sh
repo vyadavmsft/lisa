@@ -63,73 +63,77 @@ function Main() {
 	source /etc/os-release
 	case $DISTRO in
 		redhat_7|centos_7|redhat_8|centos_8)
-			# install required packages regardless VM types.
-			LogMsg "Starting RHEL/CentOS setup"
-			LogMsg "Installing required packages ..."
-			install_package "kernel-devel-$(uname -r) valgrind-devel redhat-rpm-config rpm-build gcc gcc-gfortran libdb-devel gcc-c++ glibc-devel zlib-devel numactl-devel libmnl-devel binutils-devel iptables-devel libstdc++-devel libselinux-devel elfutils-devel libtool libnl3-devel java libstdc++.i686 gtk2 atk cairo tcl tk createrepo byacc.x86_64 net-tools"
-			# libibverbs-devel and libibmad-devel have broken dependecies on Centos 7.6
-			# Switching to direct install instead of using the function
-			yum install -y libibverbs-devel libibmad-devel
-			# Install separate packages for 7.x and 8.x
-			case $DISTRO in
-				redhat_7|centos_7)
-					install_package "python-devel dapl python-setuptools"
-				;;
-				redhat_8|centos_8)
-					install_package "python3-devel python2-devel python2-setuptools"
-				;;
-			esac
-			yum -y groupinstall "InfiniBand Support"
-			Verify_Result
-			LogMsg "Installed group packages for InfiniBand Support"
-			LogMsg "Completed the required packages installation"
-
-			LogMsg "Enabling rdma service"
-			systemctl enable rdma
-			Verify_Result
-			LogMsg "Enabled rdma service"
-
-			# This is required for new HPC VM HB- and HC- size deployment, Dec/2018
-			# Get redhat/centos version. Using custom commands instead of utils.sh function
-			# because we have seen some inconsistencies in getting the exact OS version.
-			if [[ "$install_ofed" == "yes" ]];then
-				distro_version=$(sed 's/[^.0-9]//g' /etc/redhat-release)
-				distro_version=$(echo ${distro_version:0:3})
-				hpcx_ver="redhat"$distro_version
-				mlx5_ofed_link="$mlx_ofed_partial_link$distro_version-x86_64.tgz"
-				cd
-				LogMsg "Downloading MLX driver"
-				wget $mlx5_ofed_link
+			if [[ "$endure_sku" == "no" ]];then
+				# install required packages regardless VM types.
+				LogMsg "Starting RHEL/CentOS setup"
+				LogMsg "Installing required packages ..."
+				install_package "kernel-devel-$(uname -r) valgrind-devel redhat-rpm-config rpm-build gcc gcc-gfortran libdb-devel gcc-c++ glibc-devel zlib-devel numactl-devel libmnl-devel binutils-devel iptables-devel libstdc++-devel libselinux-devel elfutils-devel libtool libnl3-devel java libstdc++.i686 gtk2 atk cairo tcl tk createrepo byacc.x86_64 net-tools"
+				# libibverbs-devel and libibmad-devel have broken dependecies on Centos 7.6
+				# Switching to direct install instead of using the function
+				yum install -y libibverbs-devel libibmad-devel
+				# Install separate packages for 7.x and 8.x
+				case $DISTRO in
+					redhat_7|centos_7)
+						install_package "python-devel dapl python-setuptools"
+					;;
+					redhat_8|centos_8)
+						install_package "python3-devel python2-devel python2-setuptools"
+					;;
+				esac
+				yum -y groupinstall "InfiniBand Support"
 				Verify_Result
-				LogMsg "Downloaded MLNX_OFED_LINUX driver, $mlx5_ofed_link"
+				LogMsg "Installed group packages for InfiniBand Support"
+				LogMsg "Completed the required packages installation"
 
-				LogMsg "Opening MLX OFED driver tar ball file"
-				file_nm=${mlx5_ofed_link##*/}
-				tar zxvf $file_nm
+				LogMsg "Enabling rdma service"
+				systemctl enable rdma
 				Verify_Result
-				LogMsg "Untar MLX driver tar ball file, $file_nm"
+				LogMsg "Enabled rdma service"
 
-				LogMsg "Installing MLX OFED driver"
-				./${file_nm%.*}/mlnxofedinstall --add-kernel-support
+				# This is required for new HPC VM HB- and HC- size deployment, Dec/2018
+				# Get redhat/centos version. Using custom commands instead of utils.sh function
+				# because we have seen some inconsistencies in getting the exact OS version.
+				if [[ "$install_ofed" == "yes" ]];then
+					distro_version=$(sed 's/[^.0-9]//g' /etc/redhat-release)
+					distro_version=$(echo ${distro_version:0:3})
+					hpcx_ver="redhat"$distro_version
+					mlx5_ofed_link="$mlx_ofed_partial_link$distro_version-x86_64.tgz"
+					cd
+					LogMsg "Downloading MLX driver"
+					wget $mlx5_ofed_link
+					Verify_Result
+					LogMsg "Downloaded MLNX_OFED_LINUX driver, $mlx5_ofed_link"
+
+					LogMsg "Opening MLX OFED driver tar ball file"
+					file_nm=${mlx5_ofed_link##*/}
+					tar zxvf $file_nm
+					Verify_Result
+					LogMsg "Untar MLX driver tar ball file, $file_nm"
+
+					LogMsg "Installing MLX OFED driver"
+					./${file_nm%.*}/mlnxofedinstall --add-kernel-support
+					Verify_Result
+					LogMsg "Installed MLX OFED driver with kernel support modules"
+				fi
+
+				# Restart IB driver after enabling the eIPoIB Driver
+				LogMsg "Changing LOAD_EIPOIB to yes"
+				sed -i -e 's/LOAD_EIPOIB=no/LOAD_EIPOIB=yes/g' /etc/infiniband/openib.conf
 				Verify_Result
-				LogMsg "Installed MLX OFED driver with kernel support modules"
+				LogMsg "Configured openib.conf file"
+
+				LogMsg "Unloading ib_isert rpcrdma ib_Srpt services"
+				modprobe -rv ib_isert rpcrdma ib_srpt
+				Verify_Result
+				LogMsg "Removed ib_isert rpcrdma ib_srpt services"
+
+				LogMsg "Restarting openibd service"
+				/etc/init.d/openibd restart
+				Verify_Result
+				LogMsg "Restarted Open IB Driver"
+			else
+				LogMsg "Endure SKU. Skip RDMA setup. Must be running CentOS-HPC 7.4"
 			fi
-
-			# Restart IB driver after enabling the eIPoIB Driver
-			LogMsg "Changing LOAD_EIPOIB to yes"
-			sed -i -e 's/LOAD_EIPOIB=no/LOAD_EIPOIB=yes/g' /etc/infiniband/openib.conf
-			Verify_Result
-			LogMsg "Configured openib.conf file"
-
-			LogMsg "Unloading ib_isert rpcrdma ib_Srpt services"
-			modprobe -rv ib_isert rpcrdma ib_srpt
-			Verify_Result
-			LogMsg "Removed ib_isert rpcrdma ib_srpt services"
-
-			LogMsg "Restarting openibd service"
-			/etc/init.d/openibd restart
-			Verify_Result
-			LogMsg "Restarted Open IB Driver"
 
 			# remove or disable firewall and selinux services, if needed
 			LogMsg "Disabling Firewall and SELinux services"
