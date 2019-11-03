@@ -937,7 +937,11 @@ Function Generate-AzureDeployJSONFile ($RGName, $ImageName, $osVHD, $RGXMLData, 
 
     #Condition Existing Storage - NonManaged disks
     if ( $StorageAccountName -inotmatch "NewStorage" -and !$UseManagedDisks ) {
-        $StorageAccountType = ($GetAzureRMStorageAccount | Where-Object {$_.StorageAccountName -eq $StorageAccountName}).Sku.Tier.ToString()
+        $StorageAccount = $GetAzureRMStorageAccount | Where-Object {$_.StorageAccountName -eq $StorageAccountName}
+        if (!$StorageAccount) {
+            Throw "Storage account '$StorageAccountName' not found"
+        }
+        $StorageAccountType = $StorageAccount.Sku.Tier.ToString()
         if ($StorageAccountType -match 'Premium') {
             $StorageAccountType = "Premium_LRS"
         }
@@ -949,7 +953,11 @@ Function Generate-AzureDeployJSONFile ($RGName, $ImageName, $osVHD, $RGXMLData, 
 
     #Condition Existing Storage - Managed Disks
     if ( $StorageAccountName -inotmatch "NewStorage" -and $UseManagedDisks ) {
-        $StorageAccountType = ($GetAzureRMStorageAccount | Where-Object {$_.StorageAccountName -eq $StorageAccountName}).Sku.Tier.ToString()
+        $StorageAccount = $GetAzureRMStorageAccount | Where-Object {$_.StorageAccountName -eq $StorageAccountName}
+        if (!$StorageAccount) {
+            Throw "Storage account '$StorageAccountName' not found"
+        }
+        $StorageAccountType = $StorageAccount.Sku.Tier.ToString()
         if ($StorageAccountType -match 'Premium') {
             $StorageAccountType = "Premium_LRS"
         }

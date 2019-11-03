@@ -144,7 +144,7 @@ Class TestController
 		}
 	}
 
-	[void] PrepareTestEnvironment($XMLSecretFile) {
+	[void] PrepareTestEnvironment($XMLSecretFile, $UpdateSecrets) {
 		if ($XMLSecretFile) {
 			if (Test-Path -Path $XMLSecretFile) {
 				$this.XmlSecrets = ([xml](Get-Content $XMLSecretFile))
@@ -152,8 +152,10 @@ Class TestController
 				# Download the tools required for LISAv2 execution.
 				Get-LISAv2Tools -XMLSecretFile $XMLSecretFile
 
-				$this.UpdateXMLStringsFromSecretsFile()
-				$this.UpdateRegionAndStorageAccountsFromSecretsFile()
+				if ($UpdateSecrets) {
+					$this.UpdateXMLStringsFromSecretsFile()
+					$this.UpdateRegionAndStorageAccountsFromSecretsFile()
+				}
 			} else {
 				Write-LogErr "The Secret file provided: $XMLSecretFile does not exist"
 			}

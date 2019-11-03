@@ -290,5 +290,6 @@ function Main {
     return $currentTestResult
 }
 
-Main -AllVmData $AllVmData -CurrentTestData $CurrentTestData -TestProvider $TestProvider `
+$vmData = $AllVmData | Select-Object -first 1
+Main -AllVmData $vmData -CurrentTestData $CurrentTestData -TestProvider $TestProvider `
     -TestParams (ConvertFrom-StringData $TestParams.Replace(";","`n"))

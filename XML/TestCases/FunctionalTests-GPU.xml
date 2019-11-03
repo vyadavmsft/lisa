@@ -2,7 +2,7 @@
     <test>
         <testName>NVIDIA-CUDA-DRIVER-VALIDATION</testName>
         <testScript>GPU-DRIVER-INSTALL.ps1</testScript>
-        <setupType>OneVM</setupType>
+        <setupType>TwoVM1Dep</setupType>
         <OverrideVMSize>Standard_NC6</OverrideVMSize>
         <files>.\Testscripts\Linux\gpu-driver-install.sh,.\Testscripts\Linux\utils.sh</files>
         <TestParameters>
@@ -17,7 +17,7 @@
     <test>
         <testName>NVIDIA-GRID-DRIVER-VALIDATION</testName>
         <testScript>GPU-DRIVER-INSTALL.ps1</testScript>
-        <setupType>OneVM</setupType>
+        <setupType>TwoVM1Dep</setupType>
         <OverrideVMSize>Standard_NV6</OverrideVMSize>
         <files>.\Testscripts\Linux\gpu-driver-install.sh,.\Testscripts\Linux\utils.sh</files>
         <Platform>Azure</Platform>
@@ -29,7 +29,7 @@
     <test>
         <testName>NVIDIA-CUDA-DRIVER-VALIDATION-MAX-GPU</testName>
         <testScript>GPU-DRIVER-INSTALL.ps1</testScript>
-        <setupType>OneVM</setupType>
+        <setupType>TwoVM1Dep</setupType>
         <OverrideVMSize>Standard_NC24</OverrideVMSize>
         <files>.\Testscripts\Linux\gpu-driver-install.sh,.\Testscripts\Linux\utils.sh</files>
         <TestParameters>
@@ -44,7 +44,7 @@
     <test>
         <testName>NVIDIA-GRID-DRIVER-VALIDATION-MAX-GPU</testName>
         <testScript>GPU-DRIVER-INSTALL.ps1</testScript>
-        <setupType>OneVM</setupType>
+        <setupType>TwoVM1Dep</setupType>
         <OverrideVMSize>Standard_NV24</OverrideVMSize>
         <files>.\Testscripts\Linux\gpu-driver-install.sh,.\Testscripts\Linux\utils.sh</files>
         <Platform>Azure</Platform>
@@ -56,7 +56,7 @@
     <test>
         <testName>GPU-PCI-RESCIND</testName>
         <testScript>GPU-DRIVER-INSTALL.ps1</testScript>
-        <setupType>OneVM</setupType>
+        <setupType>TwoVM1Dep</setupType>
         <OverrideVMSize>Standard_NC6</OverrideVMSize>
         <files>.\Testscripts\Linux\gpu-driver-install.sh,.\Testscripts\Linux\utils.sh</files>
         <TestParameters>

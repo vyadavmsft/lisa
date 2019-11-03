@@ -73,8 +73,8 @@ Class AzureController : TestController
 		}
 	}
 
-	[void] PrepareTestEnvironment($XMLSecretFile) {
-		([TestController]$this).PrepareTestEnvironment($XMLSecretFile)
+	[void] PrepareTestEnvironment($XMLSecretFile, $UpdateSecrets) {
+		([TestController]$this).PrepareTestEnvironment($XMLSecretFile, $UpdateSecrets)
 		$RegionAndStorageMapFile = Resolve-Path ".\XML\RegionAndStorageAccounts.xml"
 		if (Test-Path $RegionAndStorageMapFile) {
 			$RegionAndStorageMap = [xml](Get-Content $RegionAndStorageMapFile)

@@ -105,7 +105,7 @@ Describe "Test if module ${moduleName} PrepareTestEnvironment is valid" {
 		$azureController.TestLocation = "westus2"
 		$fakeXML = "test1.xml"
 
-		{ $azureController.PrepareTestEnvironment($fakeXML) } | Should Not Throw
+		{ $azureController.PrepareTestEnvironment($fakeXML, $true) } | Should Not Throw
 	}
 }
 
@@ -116,7 +116,7 @@ Describe "Test if module ${moduleName} PrepareTestEnvironment can fail" {
 		$azureController = New-Object -TypeName $moduleName
 
 		$fakeXML = "test2.xml"
-		{ $azureController.PrepareTestEnvironment($fakeXML) } | Should Throw
+		{ $azureController.PrepareTestEnvironment($fakeXML, $true) } | Should Throw
 	}
 
 	It "Should run all mocked commands" {

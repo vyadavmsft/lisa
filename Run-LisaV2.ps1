@@ -85,6 +85,7 @@ Param(
 	# [Optional] Parameters for changing framework behavior.
 	[int]    $TestIterations = 1,
 	[string] $XMLSecretFile = "",
+	[switch] $UpdateSecrets,
 	[switch] $EnableTelemetry,
 	[switch] $UseExistingRG,
 
@@ -134,5 +135,6 @@ try {
 	Start-LISAv2 @params
 	exit 0
 } catch {
+	Write-Host $_
 	exit 1
 }
