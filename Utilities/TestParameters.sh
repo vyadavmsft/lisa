@@ -87,6 +87,7 @@ Email=""
 #Required (These credential be used to create your test VMs. In case of debugging, you can use this to login to test VM.)
 LinuxUsername=""
 LinuxPassword=""
+LinuxAdminSshKey=""
 
 
 #Required (Your pipeline name)

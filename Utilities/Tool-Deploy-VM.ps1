@@ -49,6 +49,7 @@ Param(
     [String] $Username,
     [Parameter(Mandatory=$true)]
     [String] $Password,
+    [String] $LinuxAdminSshKey,
 
     [String] $AutoCleanup,
     [String] $TiPCluster,
@@ -64,6 +65,7 @@ try {
         $XmlSecrets = [xml](Get-Content -Path $customSecretsFilePath)
         $XmlSecrets.secrets.linuxTestUsername = $Username
         $XmlSecrets.secrets.linuxTestPassword = $Password
+        $XmlSecrets.secrets.linuxAdminSshKey = $LinuxAdminSshKey
         $XmlSecrets.Save($customSecretsFilePath)
     } else {
         Throw "Please provide -Username and -Password"

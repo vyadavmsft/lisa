@@ -105,6 +105,7 @@ Please follow the steps mentioned at [here](https://docs.microsoft.com/en-us/azu
             <!--VMs Credential-->
             <linuxTestUsername></linuxTestUsername>
             <linuxTestPassword></linuxTestPassword>
+            <linuxAdminSshKey></linuxAdminSshKey>
             <!--Database info for upload results-->
             <DatabaseServer></DatabaseServer>
             <DatabaseUser></DatabaseUser>

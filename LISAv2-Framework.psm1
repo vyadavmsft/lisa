@@ -48,7 +48,7 @@ function Start-LISAv2 {
 		# [Optional] Parameters for changing framework behavior.
 		[int]    $TestIterations = 1,
 		[string] $XMLSecretFile = "",
-		[switch] $UpdateSecrets,
+		[switch] $SkipSecretsUpdate,
 		[switch] $EnableTelemetry,
 		[switch] $UseExistingRG,
 
@@ -101,6 +101,7 @@ function Start-LISAv2 {
 			if ($ParametersFile) {
 				$paramTable = Import-TestParameters -ParametersFile $ParametersFile
 			}
+
 			# Processing parameters provided in the command runtime
 			$paramList = (Get-Command -Name $PSCmdlet.MyInvocation.InvocationName).Parameters
 			foreach ($paramName in $paramList.Keys) {
@@ -140,7 +141,7 @@ function Start-LISAv2 {
 				$XMLSecretFile = $env:Azure_Secrets_File
 				Write-LogInfo "The Secrets file is defined by an environment variable."
 			}
-			$testController.PrepareTestEnvironment($XMLSecretFile, $UpdateSecrets)
+			$testController.PrepareTestEnvironment($XMLSecretFile, $SkipSecretsUpdate)
 
 			# Validate all the XML files and then import test cases from them for test
 			Validate-XmlFiles -ParentFolder $workingDirectory

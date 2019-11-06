@@ -50,6 +50,7 @@ Class TestController
 	[string] $TestLocation
 	[string] $VmUsername
 	[string] $VmPassword
+	[string] $VmAdminSshKey
 	[string] $RGIdentifier
 	[string] $OsVHD
 	[string] $TestCategory
@@ -144,7 +145,7 @@ Class TestController
 		}
 	}
 
-	[void] PrepareTestEnvironment($XMLSecretFile, $UpdateSecrets) {
+	[void] PrepareTestEnvironment($XMLSecretFile, $SkipSecretsUpdate) {
 		if ($XMLSecretFile) {
 			if (Test-Path -Path $XMLSecretFile) {
 				$this.XmlSecrets = ([xml](Get-Content $XMLSecretFile))
@@ -152,7 +153,7 @@ Class TestController
 				# Download the tools required for LISAv2 execution.
 				Get-LISAv2Tools -XMLSecretFile $XMLSecretFile
 
-				if ($UpdateSecrets) {
+				if (-not $SkipSecretsUpdate) {
 					$this.UpdateXMLStringsFromSecretsFile()
 					$this.UpdateRegionAndStorageAccountsFromSecretsFile()
 				}
@@ -182,6 +183,7 @@ Class TestController
 		# Used in test cases
 		Set-Variable -Name user -Value $this.VmUsername -Scope Global -Force
 		Set-Variable -Name password -Value $this.VmPassword -Scope Global -Force
+		Set-Variable -Name sshkey -Value $this.VmAdminSshKey -Scope Global -Force
 		# Global config
 		Set-Variable -Name GlobalConfig -Value $this.GlobalConfig -Scope Global -Force
 		# XML secrets, used in Upload-TestResultToDatabase

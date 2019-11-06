@@ -52,13 +52,14 @@ Class WSLController : TestController
 		}
 	}
 
-	[void] PrepareTestEnvironment($XMLSecretFile, $UpdateSecrets) {
-		([TestController]$this).PrepareTestEnvironment($XMLSecretFile, $UpdateSecrets)
+	[void] PrepareTestEnvironment($XMLSecretFile, $SkipSecretsUpdate) {
+		([TestController]$this).PrepareTestEnvironment($XMLSecretFile, $SkipSecretsUpdate)
 		$wslConfig = $this.GlobalConfig.Global.WSL
 		$secrets = $this.XmlSecrets.secrets
 		if ($this.XMLSecrets) {
 			$wslConfig.TestCredentials.LinuxUsername = $secrets.linuxTestUsername
 			$wslConfig.TestCredentials.LinuxPassword = $secrets.linuxTestPassword
+			$azureConfig.TestCredentials.LinuxAdminSshKey = $secrets.linuxAdminSshKey
 			$wslConfig.ResultsDatabase.server = $secrets.DatabaseServer
 			$wslConfig.ResultsDatabase.user = $secrets.DatabaseUser
 			$wslConfig.ResultsDatabase.password = $secrets.DatabasePassword
@@ -66,6 +67,7 @@ Class WSLController : TestController
 		}
 		$this.VmUsername = $wslConfig.TestCredentials.LinuxUsername
 		$this.VmPassword = $wslConfig.TestCredentials.LinuxPassword
+		$this.VmAdminSshKey = $wslConfig.TestCredentials.linuxAdminSshKey
 		if ( $this.DestinationOsVHDPath )
 		{
 			for( $index=0 ; $index -lt $wslConfig.Hosts.ChildNodes.Count ; $index++ ) {

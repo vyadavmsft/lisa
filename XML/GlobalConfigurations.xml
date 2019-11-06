@@ -18,6 +18,7 @@
         <TestCredentials>
             <LinuxUsername>YOUR_USERNAME</LinuxUsername>
             <LinuxPassword>xxxxxxxxxxxxxxxxxxxxxxxxx</LinuxPassword>
+            <LinuxAdminSshKey>xxxxxxxxxxxxxxxxxxxxxxxxx</LinuxAdminSshKey>
         </TestCredentials>
     </Azure>
     <HyperV>
@@ -42,6 +43,7 @@
         <TestCredentials>
             <LinuxUsername>YOUR_USERNAME</LinuxUsername>
             <LinuxPassword>xxxxxxxxxxxxxxxxxxxxxxxxx</LinuxPassword>
+            <LinuxAdminSshKey>xxxxxxxxxxxxxxxxxxxxxxxxx</LinuxAdminSshKey>
         </TestCredentials>
     </HyperV>
     <WSL>
@@ -68,6 +70,7 @@
         <TestCredentials>
             <LinuxUsername>YOUR_USERNAME</LinuxUsername>
             <LinuxPassword>xxxxxxxxxxxxxxxxxxxxxxxxx</LinuxPassword>
+            <LinuxAdminSshKey>xxxxxxxxxxxxxxxxxxxxxxxxx</LinuxAdminSshKey>
         </TestCredentials>
     </WSL>
 </Global>

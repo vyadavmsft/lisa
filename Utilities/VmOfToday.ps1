@@ -80,6 +80,7 @@ Function Add-ResultSummary($VmData, $Secrets, $Rg, $UsersToNotify) {
 	$result.Add("SSH Port", $VmData.SSHPort)
 	$result.Add("User Name", $Secrets.linuxTestUsername)
 	$result.Add("Password", $Secrets.linuxTestPassword)
+	$result.Add("LinuxAdminSshKey", $Secrets.linuxAdminSshKey)
 	$result.Add("Instance Size", $VmData.InstanceSize)
 	$result.Add("Location", $VmData.Location)
 	$result.Add("Locked By", $($UsersToNotify -join ','))

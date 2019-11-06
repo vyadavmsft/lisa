@@ -73,8 +73,8 @@ Class AzureController : TestController
 		}
 	}
 
-	[void] PrepareTestEnvironment($XMLSecretFile, $UpdateSecrets) {
-		([TestController]$this).PrepareTestEnvironment($XMLSecretFile, $UpdateSecrets)
+	[void] PrepareTestEnvironment($XMLSecretFile, $SkipSecretsUpdate) {
+		([TestController]$this).PrepareTestEnvironment($XMLSecretFile, $SkipSecretsUpdate)
 		$RegionAndStorageMapFile = Resolve-Path ".\XML\RegionAndStorageAccounts.xml"
 		if (Test-Path $RegionAndStorageMapFile) {
 			$RegionAndStorageMap = [xml](Get-Content $RegionAndStorageMapFile)
@@ -88,6 +88,7 @@ Class AzureController : TestController
 			$azureConfig.Subscription.SubscriptionID = $secrets.SubscriptionID
 			$azureConfig.TestCredentials.LinuxUsername = $secrets.linuxTestUsername
 			$azureConfig.TestCredentials.LinuxPassword = $secrets.linuxTestPassword
+			$azureConfig.TestCredentials.LinuxAdminSshKey = $secrets.linuxAdminSshKey
 			$azureConfig.ResultsDatabase.server = $secrets.DatabaseServer
 			$azureConfig.ResultsDatabase.user = $secrets.DatabaseUser
 			$azureConfig.ResultsDatabase.password = $secrets.DatabasePassword
@@ -96,6 +97,8 @@ Class AzureController : TestController
 		}
 		$this.VmUsername = $azureConfig.TestCredentials.LinuxUsername
 		$this.VmPassword = $azureConfig.TestCredentials.LinuxPassword
+		$this.VmAdminSshKey = $azureConfig.TestCredentials.linuxAdminSshKey
+
 		# global variables: StorageAccount, TestLocation
 		if ( $this.StorageAccount -imatch "ExistingStorage_Standard" )
 		{

@@ -70,13 +70,14 @@ Class HyperVController : TestController
 		}
 	}
 
-	[void] PrepareTestEnvironment($XMLSecretFile, $UpdateSecrets) {
-		([TestController]$this).PrepareTestEnvironment($XMLSecretFile, $UpdateSecrets)
+	[void] PrepareTestEnvironment($XMLSecretFile, $SkipSecretsUpdate) {
+		([TestController]$this).PrepareTestEnvironment($XMLSecretFile, $SkipSecretsUpdate)
 		$hyperVConfig = $this.GlobalConfig.Global.HyperV
 		$secrets = $this.XmlSecrets.secrets
 		if ($this.XMLSecrets) {
 			$hyperVConfig.TestCredentials.LinuxUsername = $secrets.linuxTestUsername
 			$hyperVConfig.TestCredentials.LinuxPassword = $secrets.linuxTestPassword
+			$azureConfig.TestCredentials.LinuxAdminSshKey = $secrets.linuxAdminSshKey
 			$hyperVConfig.ResultsDatabase.server = $secrets.DatabaseServer
 			$hyperVConfig.ResultsDatabase.user = $secrets.DatabaseUser
 			$hyperVConfig.ResultsDatabase.password = $secrets.DatabasePassword
@@ -84,6 +85,7 @@ Class HyperVController : TestController
 		}
 		$this.VmUsername = $hyperVConfig.TestCredentials.LinuxUsername
 		$this.VmPassword = $hyperVConfig.TestCredentials.LinuxPassword
+		$this.VmAdminSshKey = $hyperVConfig.TestCredentials.linuxAdminSshKey
 		if ( $this.DestinationOsVHDPath ) {
 			for( $index=0 ; $index -lt $hyperVConfig.Hosts.ChildNodes.Count ; $index++ ) {
 				$hyperVConfig.Hosts.ChildNodes[$index].DestinationOsVHDPath = $this.DestinationOsVHDPath

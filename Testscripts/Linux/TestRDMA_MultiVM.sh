@@ -721,18 +721,18 @@ function Main() {
 		Run_IMB_MPI1
 		Run_IMB_RMA
 		Run_IMB_NBC
-	fi
 
-	# Sometimes IMB-P2P and IMB-IO aren't available, skip them if it's the case
-	if [ ! -z "$imb_p2p_path" ]; then
-		Run_IMB_P2P
-	else
-		LogMsg "INFINIBAND_VERIFICATION_SKIPPED_P2P_ALLNODES"
-	fi
-	if [ ! -z "$imb_io_path" ]; then
-		Run_IMB_IO
-	else
-		LogMsg "INFINIBAND_VERIFICATION_SKIPPED_IO_ALLNODES"
+		# Sometimes IMB-P2P and IMB-IO aren't available, skip them if it's the case
+		if [ ! -z "$imb_p2p_path" ]; then
+			Run_IMB_P2P
+		else
+			LogMsg "INFINIBAND_VERIFICATION_SKIPPED_P2P_ALLNODES"
+		fi
+		if [ ! -z "$imb_io_path" ]; then
+			Run_IMB_IO
+		else
+			LogMsg "INFINIBAND_VERIFICATION_SKIPPED_IO_ALLNODES"
+		fi
 	fi
 
 	# Get all results and finish the test

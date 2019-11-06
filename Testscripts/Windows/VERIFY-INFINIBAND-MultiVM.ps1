@@ -7,40 +7,39 @@ param([object] $AllVmData,
 function Resolve-UninitializedIB {
 	# SUSE, sometimes, needs to re-initializes IB port through rebooting
 	if (-not @("UBUNTU").contains($global:detectedDistro)) {
-		if ($CurrentTestData.TestParameters.param.Contains('endure_sku=yes')) {
+		$endureSku = $CurrentTestData.TestParameters.param.Contains('endure_sku=yes')
+		if ($endureSku) {
 			Write-LogInfo "Endure SKU"
-			$cmd = "lsmod | grep -P '^(?=.*rdma_cm)(?=.*rdma_ucm)(?=.*ib_ipoib)'"
-			foreach ($VmData in $AllVMData) {
-				$ibvOutput = ""
+			$cmd = "ip addr show | grep 'eth1' | grep '172'"
+		} else  {
+			Write-LogInfo "SR-IOV SKU"
+			$cmd = "lsmod | grep -P '^(?=.*mlx5_ib)(?=.*rdma_cm)(?=.*rdma_ucm)(?=.*ib_ipoib)'"
+		}
+		foreach ($VmData in $AllVMData) {
+			$ibvOutput = ""
+			$retries = 0
+			while ($retries -lt 4) {
 				$ibvOutput = Run-LinuxCmd -ip $VMData.PublicIP -port $VMData.SSHPort -username `
 					$superUser -password $password $cmd -ignoreLinuxExitCode:$true
 				if (-not $ibvOutput) {
 					Write-LogWarn "IB is NOT initialized in $($VMData.RoleName)"
-					Throw "After 3 reboots IB has NOT been initialized on $($VMData.RoleName)"
-				}
-			}
-		} else {
-			Write-LogInfo "SR-IOV SKU"
-			$cmd = "lsmod | grep -P '^(?=.*mlx5_ib)(?=.*rdma_cm)(?=.*rdma_ucm)(?=.*ib_ipoib)'"
-			foreach ($VmData in $AllVMData) {
-				$ibvOutput = ""
-				$retries = 0
-				while ($retries -lt 4) {
-					$ibvOutput = Run-LinuxCmd -ip $VMData.PublicIP -port $VMData.SSHPort -username `
-						$superUser -password $password $cmd -ignoreLinuxExitCode:$true
-					if (-not $ibvOutput) {
-						Write-LogWarn "IB is NOT initialized in $($VMData.RoleName)"
+					if ($endureSku) {
+						$cmdRestart = "systemctl restart waagent"
+						$restartOutput = Run-LinuxCmd -ip $VMData.PublicIP -port $VMData.SSHPort -username `
+							$superUser -password $password $cmdRestart -ignoreLinuxExitCode:$true
+						Start-Sleep -s 30
+					} else {
 						$TestProvider.RestartAllDeployments($VmData)
 						Start-Sleep -s 20
-						$retries++
-					} else {
-						Write-LogInfo "IB is initialized in $($VMData.RoleName)"
-						break
 					}
+					$retries++
+				} else {
+					Write-LogInfo "IB is initialized in $($VMData.RoleName)"
+					break
 				}
-				if ($retries -eq 4) {
-					Throw "After 3 reboots IB has NOT been initialized on $($VMData.RoleName)"
-				}
+			}
+			if ($retries -eq 4) {
+				Throw "After 3 reboots IB has NOT been initialized on $($VMData.RoleName)"
 			}
 		}
 	}
@@ -309,6 +308,7 @@ function Main {
 				} else {
 					$TempName = "Reboot"
 				}
+				
 				New-Item -Path "$LogDir\InfiniBand-Verification-$Iteration-$TempName" -Force -ItemType Directory | Out-Null
 				Move-Item -Path "$LogDir\$InfinibandNic-status*" -Destination "$LogDir\InfiniBand-Verification-$Iteration-$TempName" | Out-Null
 				Move-Item -Path "$LogDir\IMB*" -Destination "$LogDir\InfiniBand-Verification-$Iteration-$TempName" | Out-Null

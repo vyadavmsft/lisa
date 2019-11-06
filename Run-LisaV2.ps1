@@ -85,7 +85,7 @@ Param(
 	# [Optional] Parameters for changing framework behavior.
 	[int]    $TestIterations = 1,
 	[string] $XMLSecretFile = "",
-	[switch] $UpdateSecrets,
+	[switch] $SkipSecretsUpdate,
 	[switch] $EnableTelemetry,
 	[switch] $UseExistingRG,
 

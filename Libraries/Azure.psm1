@@ -1014,7 +1014,8 @@ Function Generate-AzureDeployJSONFile ($RGName, $ImageName, $osVHD, $RGXMLData, 
     #$PublicIPv6Name = $($RGName.ToUpper() -replace '[^a-z]') + "PublicIPv6"
     $PublicIPv6Name = "PublicIPv6"
     $sshPath = '/home/' + $user + '/.ssh/authorized_keys'
-    $sshKeyData = ""
+    $sshKeyData = $sshkey
+
     $createAvailabilitySet = !$UseExistingRG
 
     if ($UseExistingRG) {
@@ -1841,22 +1842,24 @@ Function Generate-AzureDeployJSONFile ($RGName, $ImageName, $osVHD, $RGXMLData, 
             Add-Content -Value "$($indents[4]){" -Path $jsonFile
             Add-Content -Value "$($indents[5])^computername^: ^$vmName^," -Path $jsonFile
             Add-Content -Value "$($indents[5])^adminUsername^: ^[variables('adminUserName')]^," -Path $jsonFile
-            Add-Content -Value "$($indents[5])^adminPassword^: ^[variables('adminPassword')]^" -Path $jsonFile
-            #Add-Content -Value "$($indents[5])^linuxConfiguration^:" -Path $jsonFile
-            #Add-Content -Value "$($indents[5]){" -Path $jsonFile
-            #    Add-Content -Value "$($indents[6])^ssh^:" -Path $jsonFile
-            #    Add-Content -Value "$($indents[6]){" -Path $jsonFile
-            #        Add-Content -Value "$($indents[7])^publicKeys^:" -Path $jsonFile
-            #        Add-Content -Value "$($indents[7])[" -Path $jsonFile
-            #            Add-Content -Value "$($indents[8])[" -Path $jsonFile
-            #                Add-Content -Value "$($indents[9]){" -Path $jsonFile
-            #                    Add-Content -Value "$($indents[10])^path^:^$sshPath^," -Path $jsonFile
-            #                    Add-Content -Value "$($indents[10])^keyData^:^$sshKeyData^" -Path $jsonFile
-            #                Add-Content -Value "$($indents[9])}" -Path $jsonFile
-            #            Add-Content -Value "$($indents[8])]" -Path $jsonFile
-            #        Add-Content -Value "$($indents[7])]" -Path $jsonFile
-            #    Add-Content -Value "$($indents[6])}" -Path $jsonFile
-            #Add-Content -Value "$($indents[5])}" -Path $jsonFile
+            Add-Content -Value "$($indents[5])^adminPassword^: ^[variables('adminPassword')]^," -Path $jsonFile
+
+            # For passwordless SSH auth
+            Add-Content -Value "$($indents[5])^linuxConfiguration^:" -Path $jsonFile
+            Add-Content -Value "$($indents[5]){" -Path $jsonFile
+            Add-Content -Value "$($indents[6])^disablePasswordAuthentication^: ^false^," -Path $jsonFile
+                Add-Content -Value "$($indents[6])^ssh^:" -Path $jsonFile
+                Add-Content -Value "$($indents[6]){" -Path $jsonFile
+                    Add-Content -Value "$($indents[7])^publicKeys^:" -Path $jsonFile
+                    Add-Content -Value "$($indents[7])[" -Path $jsonFile
+                            Add-Content -Value "$($indents[8]){" -Path $jsonFile
+                                Add-Content -Value "$($indents[9])^path^:^$sshPath^," -Path $jsonFile
+                                Add-Content -Value "$($indents[9])^keyData^:^$sshKeyData^" -Path $jsonFile
+                            Add-Content -Value "$($indents[8])}" -Path $jsonFile
+                    Add-Content -Value "$($indents[7])]" -Path $jsonFile
+                Add-Content -Value "$($indents[6])}" -Path $jsonFile
+            Add-Content -Value "$($indents[5])}" -Path $jsonFile
+
             Add-Content -Value "$($indents[4])}," -Path $jsonFile
             #endregion
         }
