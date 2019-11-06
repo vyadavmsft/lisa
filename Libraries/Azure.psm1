@@ -1014,7 +1014,7 @@ Function Generate-AzureDeployJSONFile ($RGName, $ImageName, $osVHD, $RGXMLData, 
     #$PublicIPv6Name = $($RGName.ToUpper() -replace '[^a-z]') + "PublicIPv6"
     $PublicIPv6Name = "PublicIPv6"
     $sshPath = '/home/' + $user + '/.ssh/authorized_keys'
-    $sshKeyData = $sshkey
+    $sshKeyData = $adminsshkey
 
     $createAvailabilitySet = !$UseExistingRG
 

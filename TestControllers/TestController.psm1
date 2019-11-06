@@ -183,7 +183,7 @@ Class TestController
 		# Used in test cases
 		Set-Variable -Name user -Value $this.VmUsername -Scope Global -Force
 		Set-Variable -Name password -Value $this.VmPassword -Scope Global -Force
-		Set-Variable -Name sshkey -Value $this.VmAdminSshKey -Scope Global -Force
+		Set-Variable -Name adminsshkey -Value $this.VmAdminSshKey -Scope Global -Force
 		# Global config
 		Set-Variable -Name GlobalConfig -Value $this.GlobalConfig -Scope Global -Force
 		# XML secrets, used in Upload-TestResultToDatabase
