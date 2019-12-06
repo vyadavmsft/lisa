@@ -59,8 +59,6 @@ function Main() {
 	# Change memory limits
 	echo "* soft memlock unlimited" >> /etc/security/limits.conf
 	echo "* hard memlock unlimited" >> /etc/security/limits.conf
-	echo "root soft memlock unlimited" >> /etc/security/limits.conf
-	echo "root hard memlock unlimited" >> /etc/security/limits.conf
 	hpcx_ver=""
 	source /etc/os-release
 	case $DISTRO in
@@ -178,6 +176,10 @@ function Main() {
 			;;
 		ubuntu*)
 			LogMsg "This is Ubuntu"
+			# Ubuntu needs limits for root to be explicit. This is needed since the tests run as root via SSH
+			echo "root soft memlock unlimited" >> /etc/security/limits.conf
+			echo "root hard memlock unlimited" >> /etc/security/limits.conf
+
 			# IBM Platform MPI & Intel MPI do not seem to work. Under investigation.
 			if [ $mpi_type == "intel" ]; then
 				LogMsg "Installing required packages ..."
