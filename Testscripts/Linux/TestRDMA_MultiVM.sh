@@ -692,10 +692,10 @@ function Main() {
 		intel)
 			vars=$(find / -name mpivars.sh | grep intel)
 			source $vars
-			imb_mpi1_path=$(find / -name IMB-MPI1 | grep intel)
-			imb_rma_path=$(find / -name IMB-RMA | grep intel)
-			imb_nbc_path=$(find / -name IMB-NBC | grep intel)
-			mpi_run_path=$(find / -name mpirun | grep intel64)
+			imb_mpi1_path=$(find / -name IMB-MPI1 | grep intel | head -n 1)
+			imb_rma_path=$(find / -name IMB-RMA | grep intel | head -n 1)
+			imb_nbc_path=$(find / -name IMB-NBC | grep intel | head -n 1)
+			mpi_run_path=$(find / -name mpirun | grep intel64 | head -n 1)
 		;;
 		mvapich)
 			total_virtual_machines=$(($total_virtual_machines + 1))

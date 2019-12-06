@@ -118,7 +118,7 @@ function Upload-RemoteFile($uploadTo, $port, $file, $username, $password, $usePr
 				if ( ($now - $uploadStartTime).TotalSeconds -gt 600 )
 				{
 					$uploadTimout = $true
-					Write-LogErr "Upload Timout!"
+					Write-LogErr "Upload Timeout!"
 				}
 				Start-Sleep -Seconds 1
 				$uploadJobStatus = Get-Job -Id $uploadJob.Id
@@ -337,7 +337,9 @@ Function Wrap-CommandsToFile([string] $username,[string] $password,[string] $ip,
 	}
 }
 
-Function Run-LinuxCmd([string] $username,[string] $password,[string] $ip,[string] $command, [int] $port, [switch]$runAsSudo, [Boolean]$WriteHostOnly, [Boolean]$NoLogsPlease, [switch]$ignoreLinuxExitCode, [int]$runMaxAllowedTime = 300, [switch]$RunInBackGround, [int]$maxRetryCount = 20, [string] $MaskStrings)
+Function Run-LinuxCmd([string] $username, [string] $password, [string] $ip, [string] $command, [int] $port,
+						[switch]$runAsSudo, [Boolean]$WriteHostOnly, [Boolean]$NoLogsPlease, [switch]$ignoreLinuxExitCode,
+						[int]$runMaxAllowedTime = 300, [switch]$RunInBackGround, [int]$maxRetryCount = 20, [string] $MaskStrings)
 {
 	Wrap-CommandsToFile $username $password $ip $command $port
 	$MaskedCommand = $command
@@ -449,7 +451,7 @@ Function Run-LinuxCmd([string] $username,[string] $password,[string] $ip,[string
 					$debugOutput += "$debugString`n"
 				}
 				Write-Progress -Activity "Attempt : $attemptswot+$attemptswt : Initiating command in Background Mode : $logCommand on $ip : $port" `
-					-Status "Timeout in $($RunMaxAllowedTime - $RunElaplsedTime) seconds.." -Id 87678 `
+					-Status "Timeout in $($RunMaxAllowedTime - $RunElaplsedTime) seconds.." -Id $runLinuxCmdJob.Id `
 					-PercentComplete (($RunElaplsedTime/$RunMaxAllowedTime)*100) -CurrentOperation "SSH ACTIVITY : $debugString"
 				$RunCurrentTime = Get-Date
 				$RunDiffTime = $RunCurrentTime - $RunStartTime
@@ -464,6 +466,7 @@ Function Run-LinuxCmd([string] $username,[string] $password,[string] $ip,[string
 					Stop-Job $runLinuxCmdJob
 					$timeOut = $true
 				}
+				Start-Sleep -seconds 1
 			}
 			Wait-Time -seconds 2
 			$SSHOut = Receive-Job $runLinuxCmdJob 2> $LogDir\$randomFileName
@@ -494,7 +497,7 @@ Function Run-LinuxCmd([string] $username,[string] $password,[string] $ip,[string
 				$debugOutput += "$debugString`n"
 			}
 			Write-Progress -Activity "Attempt : $attemptswot+$attemptswt : Executing $logCommand on $ip : $port" `
-				-Status $runLinuxCmdJob.State -Id 87678 -SecondsRemaining ($RunMaxAllowedTime - $RunElaplsedTime) -Completed
+				-Status $runLinuxCmdJob.State -Id $runLinuxCmdJob.Id -SecondsRemaining ($RunMaxAllowedTime - $RunElaplsedTime) -Completed
 			if ( $isBackGroundProcessStarted -and !$isBackGroundProcessTerminated )
 			{
 				Write-LogInfo "$MaskedCommand is running in background with ID $($runLinuxCmdJob.Id) ..."
@@ -571,7 +574,7 @@ Function Run-LinuxCmd([string] $username,[string] $password,[string] $ip,[string
 					$debugOutput += "$debugString`n"
 				}
 				Write-Progress -Activity "Attempt : $attemptswot+$attemptswt : Executing $logCommand on $ip : $port" `
-					-Status "Timeout in $($RunMaxAllowedTime - $RunElaplsedTime) seconds.." -Id 87678 `
+					-Status "Timeout in $($RunMaxAllowedTime - $RunElaplsedTime) seconds.." -Id $runLinuxCmdJob.Id `
 					-PercentComplete (($RunElaplsedTime/$RunMaxAllowedTime)*100) -CurrentOperation "SSH ACTIVITY : $debugString"
 				$RunCurrentTime = Get-Date
 				$RunDiffTime = $RunCurrentTime - $RunStartTime
@@ -582,10 +585,18 @@ Function Run-LinuxCmd([string] $username,[string] $password,[string] $ip,[string
 				}
 				else
 				{
+					Write-LogErr "Job timed out after $RunMaxAllowedTime seconds. Stopping job"
 					$notExceededTimeLimit = $false
 					Stop-Job $runLinuxCmdJob
 					$timeOut = $true
 				}
+				Start-Sleep -Seconds 1
+			}
+			Wait-Time -seconds 2
+			if ($runLinuxCmdJob.State) {
+				Write-LogInfo "runLinuxCmdJob.State = $($runLinuxCmdJob.State)"
+			} else {
+				Write-LogWarn "runLinuxCmdJob.State was null. $runLinuxCmdJob"
 			}
 			$jobOut = Receive-Job $runLinuxCmdJob 2> $LogDir\$randomFileName
 			if ($jobOut)
@@ -613,8 +624,14 @@ Function Run-LinuxCmd([string] $username,[string] $password,[string] $ip,[string
 				}
 				$debugOutput += "$debugString`n"
 			}
-			Write-Progress -Activity "Attempt : $attemptswot+$attemptswt : Executing $logCommand on $ip : $port" `
-				-Status $runLinuxCmdJob.State -Id 87678 -SecondsRemaining ($RunMaxAllowedTime - $RunElaplsedTime) -Completed
+			if ($runLinuxCmdJob.State) {
+				Write-Progress -Activity "Attempt : $attemptswot+$attemptswt : Executing $logCommand on $ip : $port" `
+					-Status $runLinuxCmdJob.State -Id $runLinuxCmdJob.Id -SecondsRemaining ($RunMaxAllowedTime - $RunElaplsedTime) -Completed
+			} else {
+				Write-LogWarn "runLinuxCmdJob.State was null. $runLinuxCmdJob"
+				Write-Progress -Activity "Attempt : $attemptswot+$attemptswt : Executing $logCommand on $ip : $port" `
+					-Status "Unknown" -Id $runLinuxCmdJob.Id -SecondsRemaining ($RunMaxAllowedTime - $RunElaplsedTime) -Completed
+			}
 			Remove-Job $runLinuxCmdJob
 			Remove-Item $LogDir\$randomFileName -Force | Out-Null
 			if ($LinuxExitCode -imatch "AZURE-LINUX-EXIT-CODE-0")

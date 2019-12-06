@@ -91,7 +91,7 @@ function Main {
 			$cmd = "lsb_release -r | awk '{print `$2}'"
 			$release = Run-LinuxCmd -ip $ServerVMData.PublicIP -port $ServerVMData.SSHPort -username `
 				$user -password $password $cmd -ignoreLinuxExitCode:$true
-			if ($release.Split(".")[0] -lt "18") {
+			if ($release.Split(".")[0] -lt "16") {
 				Write-LogInfo "Ubuntu $release is not supported! Test skipped"
 				return "SKIPPED"
 			}

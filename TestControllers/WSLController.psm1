@@ -94,12 +94,12 @@ Class WSLController : TestController
 		if( $this.ResultDBTable )
 		{
 			$wslConfig.ResultsDatabase.dbtable = ($this.ResultDBTable).Trim()
-			Write-LogInfo "ResultDBTable : $this.ResultDBTable added to GlobalConfig.Global.HyperV.ResultsDatabase.dbtable"
+			Write-LogInfo "ResultDBTable : $this.ResultDBTable added to GlobalConfig.Global.WSL.ResultsDatabase.dbtable"
 		}
 		if( $this.ResultDBTestTag )
 		{
 			$wslConfig.ResultsDatabase.testTag = ($this.ResultDBTestTag).Trim()
-			Write-LogInfo "ResultDBTestTag: $this.ResultDBTestTag added to GlobalConfig.Global.HyperV.ResultsDatabase.testTag"
+			Write-LogInfo "ResultDBTestTag: $this.ResultDBTestTag added to GlobalConfig.Global.WSL.ResultsDatabase.testTag"
 		}
 
 		Write-LogInfo "------------------------------------------------------------------"

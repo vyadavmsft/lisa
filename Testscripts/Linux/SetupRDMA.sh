@@ -59,6 +59,8 @@ function Main() {
 	# Change memory limits
 	echo "* soft memlock unlimited" >> /etc/security/limits.conf
 	echo "* hard memlock unlimited" >> /etc/security/limits.conf
+	echo "root soft memlock unlimited" >> /etc/security/limits.conf
+	echo "root hard memlock unlimited" >> /etc/security/limits.conf
 	hpcx_ver=""
 	source /etc/os-release
 	case $DISTRO in
@@ -177,14 +179,14 @@ function Main() {
 		ubuntu*)
 			LogMsg "This is Ubuntu"
 			# IBM Platform MPI & Intel MPI do not seem to work. Under investigation.
-			if [[ $mpi_type == "ibm" || $mpi_type == "intel" ]]; then
-				LogErr "Distro '$DISTRO' not supported or not implemented"
+			if [ $mpi_type == "intel" ]; then
+				LogMsg "Installing required packages ..."
+				install_package "libdapl2 libmlx4-1"
+			else
+				LogErr "MPI '$mpi_type' not supported or not implemented"
 				SetTestStateSkipped
 				exit 0
 			fi
-			hpcx_ver="ubuntu"$VERSION_ID
-			LogMsg "Installing required packages ..."
-			install_package "build-essential python-setuptools libibverbs-dev bison flex ibverbs-utils net-tools"
 			;;
 		*)
 			LogErr "MPI type $mpi_type does not support on '$DISTRO' or not implement"
@@ -287,6 +289,7 @@ function Main() {
 
 			LogMsg "Executing silent installation"
 			sed -i -e 's/ACCEPT_EULA=decline/ACCEPT_EULA=accept/g' silent.cfg
+			sed -i -e 's/ACTIVATION_TYPE=exist_lic/ACTIVATION_TYPE=trial_lic/g' silent.cfg
 			./install.sh -s silent.cfg
 			Verify_Result
 			LogMsg "Completed Intel MPI installation"
@@ -418,23 +421,30 @@ function Main() {
 	# This is customized part for RHEL 7.5 Standard_HB60rs
 	cd ~
 
-	LogMsg "Download WALA agent repo and checkout tag 2.2.35"
-	git clone --branch v2.2.35 $walaagent_repo
-	Verify_Result
+	if [[ $DISTRO == "redhat"* ]] ; then
+		LogMsg "Download WALA agent repo and checkout tag 2.2.35"
+		git clone --branch v2.2.35 $walaagent_repo
+		Verify_Result
 
-	cd WALinuxAgent
+		cd WALinuxAgent
 
-	LogMsg "Eanble EnableRDMA parameter in waagent.config"
-	sed -i -e 's/# OS.EnableRDMA=y/OS.EnableRDMA=y/g' config/waagent.conf
-	Verify_Result
+		LogMsg "Enable EnableRDMA parameter in waagent.config"
+		sed -i -e 's/# OS.EnableRDMA=y/OS.EnableRDMA=y/g' config/waagent.conf
+		Verify_Result
 
-	LogMsg "Disable AutoUpdate parameter in waagent.config"
-	sed -i -e 's/AutoUpdate.Enabled=y/# AutoUpdate.Enabled=y/g' config/waagent.conf
-	Verify_Result
+		LogMsg "Disable AutoUpdate parameter in waagent.config"
+		sed -i -e 's/AutoUpdate.Enabled=y/# AutoUpdate.Enabled=y/g' config/waagent.conf
+		Verify_Result
 
-	LogMsg "Compile WALA"
-	python setup.py install --register-service  --force
-	Verify_Result
+		LogMsg "Compile WALA"
+		python setup.py install --register-service  --force
+		Verify_Result
+	elif [[ $DISTRO == "ubuntu"* ]]; then
+		sed -i -e 's/# OS.EnableRDMA=y/OS.EnableRDMA=y/g' /etc/waagent.conf
+		Verify_Result
+		sed -i -e 's/# OS.UpdateRdmaDriver=y/OS.UpdateRdmaDriver=y/g' /etc/waagent.conf
+		Verify_Result
+	fi
 
 	LogMsg "Restart waagent service"
 	if [[ $DISTRO == "ubuntu"* ]]; then
