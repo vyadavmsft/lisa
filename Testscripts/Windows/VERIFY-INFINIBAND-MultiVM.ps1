@@ -45,6 +45,11 @@ function Resolve-UninitializedIB {
 	}
 }
 
+function GetLogs {
+	Copy-RemoteFiles -downloadFrom $ServerVMData.PublicIP -port $ServerVMData.SSHPort -username $superUser `
+		-password $password -download -downloadTo $LogDir -files "/root/TestExecution.log"
+}
+
 function Main {
     param (
         $AllVmData,
@@ -197,6 +202,7 @@ function Main {
 					$setupRDMACompleted = Run-LinuxCmd -ip $VMData.PublicIP -port $VMData.SSHPort -username $user -password $password `
 						"cat /root/constants.sh | grep setup_completed=0" -runAsSudo
 					if ($setupRDMACompleted -ne "setup_completed=0") {
+						GetLogs
 						Throw "SetupRDMA.sh run finished on $($VMData.RoleName) but setup was not successful!"
 					}
 					Write-LogInfo "SetupRDMA.sh finished on $($VMData.RoleName)"
@@ -205,14 +211,16 @@ function Main {
 
 				if ($state -eq "TestSkipped") {
 					Write-LogInfo "SetupRDMA finished with SKIPPED state!"
-					$testResult = "SKIPPED"
-					return "SKIPPED"
+					$testResult = $resultSkipped
+					GetLogs
+					return $testResult
 				}
 
 				if (($state -eq "TestFailed") -or ($state -eq "TestAborted")) {
 					Write-LogErr "SetupRDMA.sh didn't finish successfully!"
 					$testResult = $resultAborted
-					return $resultAborted
+					GetLogs
+					return $testResult
 				}
 			}
 			if ($vmCount -eq 0){

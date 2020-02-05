@@ -180,11 +180,21 @@ function Main() {
 			echo "root soft memlock unlimited" >> /etc/security/limits.conf
 			echo "root hard memlock unlimited" >> /etc/security/limits.conf
 
+			if [[ "$endure_sku" == "no" ]];then
+				LogMsg "Loading modules ib_ipoib rdma_ucm"
+				modprobe ib_ipoib rdma_ucm
+				LogMsg "Installing required packages ..."
+				install_package "ibverbs-utils libmpich-dev"
+				LogMsg "Adding modules to modules.conf ..."
+				echo "ib_ipoib" >> /etc/modules-load.d/modules.conf
+				echo "rdma_ucm" >> /etc/modules-load.d/modules.conf
+			fi
+
 			# IBM Platform MPI & Intel MPI do not seem to work. Under investigation.
 			if [ $mpi_type == "intel" ]; then
-				LogMsg "Installing required packages ..."
+				LogMsg "Installing required packages for Intel MPI..."
 				install_package "libdapl2 libmlx4-1"
-			else
+			elif [ $mpi_type != "mvapich" ]; then
 				LogErr "MPI '$mpi_type' not supported or not implemented"
 				SetTestStateSkipped
 				exit 0
@@ -408,11 +418,8 @@ function Main() {
 		make install
 		Verify_Result
 
-		#LogMsg "Adding default installed path to system path"
-		export PATH=$PATH:/usr/local/bin
-
-		# set path string to verify IBM MPI binaries
-		target_bin=/usr/local/bin/mpirun
+		# set path string to verify MPI binaries
+		target_bin=/usr/bin/mpirun
 
 		# file validation
 		Verify_File $target_bin
@@ -500,7 +507,7 @@ function post_verification() {
 	# Validate if the platform MPI binaries work in the system.
 	_hostname=$(cat /etc/hostname)
 	_ipaddress=$(hostname -i | awk '{print $1}')
-	LogMsg "Found hostname from system - $_hostname"
+	LogMsg "Found _hostname from system - $_hostname"
 	LogMsg "Found _ipaddress from system - $_ipaddress"
 
 	# MPI hostname cmd for initial test
@@ -511,7 +518,7 @@ function post_verification() {
 	elif [ $mpi_type == "open" ]; then
 		_res_hostname=$(mpirun --allow-run-as-root -np 1 --host $_ipaddress hostname)
 	else
-		_res_hostname=$(mpirun_rsh -np 1 $_ipaddress hostname)
+		_res_hostname=$(mpirun -np 1 -hosts $_ipaddress hostname)
 	fi
 	LogMsg "_res_hostname $_res_hostname"
 

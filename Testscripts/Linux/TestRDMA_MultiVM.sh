@@ -84,8 +84,8 @@ function Run_IMB_Intranode() {
 						ssh root@${vm1} "$mpi_run_path -hosts $vm1,$vm2 -ppn 2 -n 2 $non_shm_mpi_settings $imb_mpi1_path pingpong >> $log_file"
 					;;
 					mvapich)
-						LogMsg "$mpi_run_path -n 2 $vm1 $vm2 $imb_mpi1_path pingpong"
-						ssh root@${vm1} "$mpi_run_path -n 2 $vm1 $vm2 $imb_mpi1_path pingpong >> $log_file"
+						LogMsg "$mpi_run_path -n 2 -hosts $vm1,$vm2 $imb_mpi1_path pingpong"
+						ssh root@${vm1} "$mpi_run_path -n 2 -hosts $vm1,$vm2 $imb_mpi1_path pingpong >> $log_file"
 					;;
 				esac
 				mpi_intranode_status=$?
@@ -144,8 +144,8 @@ function Run_IMB_MPI1() {
 				$mpi_run_path -hosts $master,$slaves -ppn $mpi1_ppn -n $(($VM_Size * $total_virtual_machines)) $mpi_settings $imb_mpi1_path $extra_params > IMB-MPI1-AllNodes-output-Attempt-${attempt}.txt
 			;;
 			mvapich)
-				LogMsg "$mpi_run_path -n $(($mpi1_ppn * $total_virtual_machines)) $master $slaves_array $mpi_settings $imb_mpi1_path $extra_params"
-				$mpi_run_path -n $(($mpi1_ppn * $total_virtual_machines)) $master $slaves_array $mpi_settings $imb_mpi1_path $extra_params > IMB-MPI1-AllNodes-output-Attempt-${attempt}.txt
+				LogMsg "$mpi_run_path -n $(($mpi1_ppn * $total_virtual_machines)) -host $master,$slaves $mpi_settings $imb_mpi1_path $extra_params"
+				$mpi_run_path -n $(($mpi1_ppn * $total_virtual_machines)) -host $master $master,$slaves $mpi_settings $imb_mpi1_path $extra_params > IMB-MPI1-AllNodes-output-Attempt-${attempt}.txt
 			;;
 		esac
 		mpi_status=$?
@@ -433,6 +433,7 @@ function Main() {
 	# This is common space for all three types of MPI testing
 	# Verify if ib_nic got IP address on All VMs in current cluster.
 	# ib_nic comes from constants.sh. where get those values from XML tags.
+	mlx_device_name="mlx5"
 	final_ib_nic_status=0
 	total_virtual_machines=0
 	err_virtual_machines=0
@@ -445,9 +446,22 @@ function Main() {
 		# may require a reboot after the IB setup is completed
 		# Find the correct partition key for IB communicating with other VM
 		if [ -z ${MPI_IB_PKEY+x} ]; then
-			firstkey=$(cat /sys/class/infiniband/mlx5_0/ports/1/pkeys/0)
+			# Check for CX3-Pro
+			if [ ! -d /sys/class/infiniband/${mlx_device_name}_0 ]; then
+				mlx_device_name="mlx4"
+			fi
+			# If dir doesn't exist bail out
+			if [ ! -d /sys/class/infiniband/${mlx_device_name}_0 ]; then
+				LogErr "Device directory (mlx4_0 or mlx5_0) under /sys/class/infiniband doesn't exist. Can't retrieve PKEY info. Stopping"
+				SetTestStateFailed
+				Collect_Logs
+				LogErr "INFINIBAND_VERIFICATION_FAILED_${ib_nic}"
+				exit 0
+			fi
+
+			firstkey=$(cat /sys/class/infiniband/${mlx_device_name}_0/ports/1/pkeys/0)
 			LogMsg "Getting the first key $firstkey"
-			secondkey=$(cat /sys/class/infiniband/mlx5_0/ports/1/pkeys/1)
+			secondkey=$(cat /sys/class/infiniband/${mlx_device_name}_0/ports/1/pkeys/1)
 			LogMsg "Getting the second key $secondkey"
 
 			# Assign the bigger number to MPI_IB_PKEY
@@ -500,7 +514,7 @@ function Main() {
 	# ib kernel modules verification
 	# mlx5_ib, rdma_cm, rdma_ucm, ib_ipoib shall be loaded in kernel
 	final_module_load_status=0
-	kernel_modules="mlx5_ib rdma_cm rdma_ucm ib_ipoib"
+	kernel_modules="${mlx_device_name}_ib rdma_cm rdma_ucm ib_ipoib"
 	if [[ "$endure_sku" == "yes" ]];then
 		kernel_modules="rdma_cm rdma_ucm ib_ipoib"
 	fi
@@ -699,7 +713,7 @@ function Main() {
 		;;
 		mvapich)
 			total_virtual_machines=$(($total_virtual_machines + 1))
-			mpi_run_path=$(find / -name mpirun_rsh | tail -n 1)
+			mpi_run_path=$(find / -name mpirun | head -n 1)
 		;;
 		*)
 			LogErr "MPI not supported"
