@@ -715,7 +715,7 @@ function Main() {
 		;;
 		mvapich)
 			total_virtual_machines=$(($total_virtual_machines + 1))
-			mpi_run_path=$(find / -name mpirun | head -n 1)
+			mpi_run_path=/usr/local/bin/mpirun
 		;;
 		*)
 			LogErr "MPI not supported"
