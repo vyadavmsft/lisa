@@ -184,7 +184,7 @@ function Main() {
 				LogMsg "Loading modules ib_ipoib rdma_ucm"
 				modprobe ib_ipoib rdma_ucm
 				LogMsg "Installing required packages ..."
-				install_package "ibverbs-utils libmpich-dev"
+				install_package "ibverbs-utils libibverbs-dev libmpich-dev"
 				LogMsg "Adding modules to modules.conf ..."
 				echo "ib_ipoib" >> /etc/modules-load.d/modules.conf
 				echo "rdma_ucm" >> /etc/modules-load.d/modules.conf

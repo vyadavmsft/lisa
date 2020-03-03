@@ -441,23 +441,25 @@ function Main() {
 	nbc_benchmarks="Ibcast Iallgather Iallgatherv Igather Igatherv Iscatter Iscatterv Ialltoall Ialltoallv Ireduce Ireduce_scatter Iallreduce Ibarrier"
 
 	if [[ "$endure_sku" == "no" ]];then
+
+		# Check for CX3-Pro
+		if [ ! -d /sys/class/infiniband/${mlx_device_name}_0 ]; then
+			mlx_device_name="mlx4"
+		fi
+		# If dir doesn't exist bail out
+		if [ ! -d /sys/class/infiniband/${mlx_device_name}_0 ]; then
+			LogErr "Device directory (mlx4_0 or mlx5_0) under /sys/class/infiniband doesn't exist. Can't retrieve PKEY info. Stopping"
+			SetTestStateFailed
+			Collect_Logs
+			LogErr "INFINIBAND_VERIFICATION_FAILED_${ib_nic}"
+			exit 0
+		fi
+
 		# [pkey code moved from SetupRDMA.sh to TestRDMA_MultiVM.sh]
 		# It's safer to obtain pkeys in the test script because some distros
 		# may require a reboot after the IB setup is completed
 		# Find the correct partition key for IB communicating with other VM
 		if [ -z ${MPI_IB_PKEY+x} ]; then
-			# Check for CX3-Pro
-			if [ ! -d /sys/class/infiniband/${mlx_device_name}_0 ]; then
-				mlx_device_name="mlx4"
-			fi
-			# If dir doesn't exist bail out
-			if [ ! -d /sys/class/infiniband/${mlx_device_name}_0 ]; then
-				LogErr "Device directory (mlx4_0 or mlx5_0) under /sys/class/infiniband doesn't exist. Can't retrieve PKEY info. Stopping"
-				SetTestStateFailed
-				Collect_Logs
-				LogErr "INFINIBAND_VERIFICATION_FAILED_${ib_nic}"
-				exit 0
-			fi
 
 			firstkey=$(cat /sys/class/infiniband/${mlx_device_name}_0/ports/1/pkeys/0)
 			LogMsg "Getting the first key $firstkey"
