@@ -541,7 +541,7 @@ Scenario 2 : You need to run all the performance tests quickly.
 	</Parameter>
 	<Parameter>
 		<ReplaceThis>MLX_OFED_PARTIAL_LINK</ReplaceThis>
-		<ReplaceWith>http://content.mellanox.com/ofed/MLNX_OFED-4.5-1.0.1.0/MLNX_OFED_LINUX-4.5-1.0.1.0-rhel</ReplaceWith>
+		<ReplaceWith>http://content.mellanox.com/ofed/MLNX_OFED-4.7-3.2.9.0/MLNX_OFED_LINUX-4.7-3.2.9.0-rhel</ReplaceWith>
 	</Parameter>
 	<Parameter>
 		<ReplaceThis>HPCX_PARTIAL_LINK_OFED</ReplaceThis>
