@@ -190,7 +190,6 @@ function Main() {
 				echo "rdma_ucm" >> /etc/modules-load.d/modules.conf
 			fi
 
-			# IBM Platform MPI & Intel MPI do not seem to work. Under investigation.
 			if [ $mpi_type == "intel" ]; then
 				LogMsg "Installing required packages for Intel MPI..."
 				install_package "libdapl2 libmlx4-1"
