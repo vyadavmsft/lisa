@@ -33,9 +33,6 @@ Class AzureProvider : TestProvider
 	[bool] $EnableTelemetry
 	[string] $PlatformFaultDomainCount
 	[string] $PlatformUpdateDomainCount
-	# Whether or not to add NetworkSecurityGroup and NSG rules to Microsoft.Network/networkInterfaces resources
-	# XML/Other/NetworkSecurityGroupRules.xml need to be prepared.
-	[bool] $EnableNSG = $false
 
 	[object] DeployVMs([xml] $GlobalConfig, [object] $SetupTypeData, [object] $TestCaseData, [string] $TestLocation, [string] $RGIdentifier, [bool] $UseExistingRG, [string] $ResourceCleanup) {
 		$allVMData = @()
@@ -54,7 +51,7 @@ Class AzureProvider : TestProvider
 				$isAllDeployed = Create-AllResourceGroupDeployments -SetupTypeData $SetupTypeData -TestCaseData $TestCaseData -Distro $RGIdentifier `
 					-TestLocation $TestLocation -GlobalConfig $GlobalConfig -TipSessionId $this.TipSessionId -TipCluster $this.TipCluster `
 					-UseExistingRG $UseExistingRG -ResourceCleanup $ResourceCleanup -PlatformFaultDomainCount $this.PlatformFaultDomainCount `
-					-PlatformUpdateDomainCount $this.PlatformUpdateDomainCount -EnableNSG $this.EnableNSG
+					-PlatformUpdateDomainCount $this.PlatformUpdateDomainCount
 
 				if ($isAllDeployed[0] -eq "True") {
 					$deployedGroups = $isAllDeployed[1]
@@ -106,7 +103,7 @@ Class AzureProvider : TestProvider
 		}
 		$uniqueRgs = $rgs | Select-Object -Unique
 		foreach ($rg in $uniqueRgs) {
-			$isCleaned = Delete-ResourceGroup -RGName $rg -UseExistingRG $UseExistingRG -AllVMData $allVMData
+			$isCleaned = Delete-ResourceGroup -RGName $rg -UseExistingRG $UseExistingRG
 			if (!$isCleaned)
 			{
 				Write-LogInfo "Failed to trigger delete resource group $rg.. Please delete it manually."
