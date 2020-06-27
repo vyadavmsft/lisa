@@ -245,7 +245,12 @@ function Main {
         # The expected ratio is 1 GPU adapter for every 6 CPU cores
         $vmCPUCount = Run-LinuxCmd -username $user -password $password -ip $allVMData.PublicIP `
             -port $allVMData.SSHPort -command "nproc" -ignoreLinuxExitCode
-        [int]$expectedGPUCount = $($vmCPUCount/6)
+        
+        $cpuGpuRatio = 6
+        if ($allVMData.InstanceSize -imatch "Standard_ND40") {
+            $cpuGpuRatio = 5
+        }
+        [int]$expectedGPUCount = $($vmCPUCount/$cpuGpuRatio)
 
         Write-LogInfo "Azure VM Size: $($allVMData.InstanceSize), expected GPU Adapters total: $expectedGPUCount"
 

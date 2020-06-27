@@ -4,6 +4,9 @@
         <testScript>GPU-DRIVER-INSTALL.ps1</testScript>
         <setupType>TwoVM1Dep</setupType>
         <OverrideVMSize>Standard_NC6</OverrideVMSize>
+        <AdditionalHWConfig>
+            <DiskType>Managed</DiskType>
+        </AdditionalHWConfig>
         <files>.\Testscripts\Linux\gpu-driver-install.sh,.\Testscripts\Linux\utils.sh</files>
         <TestParameters>
             <param>CUDADriverVersion="CUDA_DRIVER"</param>
@@ -19,6 +22,9 @@
         <testScript>GPU-DRIVER-INSTALL.ps1</testScript>
         <setupType>TwoVM1Dep</setupType>
         <OverrideVMSize>Standard_NV6</OverrideVMSize>
+        <AdditionalHWConfig>
+            <DiskType>Managed</DiskType>
+        </AdditionalHWConfig>
         <files>.\Testscripts\Linux\gpu-driver-install.sh,.\Testscripts\Linux\utils.sh</files>
         <Platform>Azure</Platform>
         <Category>Functional</Category>
@@ -31,6 +37,9 @@
         <testScript>GPU-DRIVER-INSTALL.ps1</testScript>
         <setupType>TwoVM1Dep</setupType>
         <OverrideVMSize>Standard_NC24</OverrideVMSize>
+        <AdditionalHWConfig>
+            <DiskType>Managed</DiskType>
+        </AdditionalHWConfig>
         <files>.\Testscripts\Linux\gpu-driver-install.sh,.\Testscripts\Linux\utils.sh</files>
         <TestParameters>
             <param>CUDADriverVersion="CUDA_DRIVER"</param>
@@ -46,6 +55,9 @@
         <testScript>GPU-DRIVER-INSTALL.ps1</testScript>
         <setupType>TwoVM1Dep</setupType>
         <OverrideVMSize>Standard_NV24</OverrideVMSize>
+        <AdditionalHWConfig>
+            <DiskType>Managed</DiskType>
+        </AdditionalHWConfig>
         <files>.\Testscripts\Linux\gpu-driver-install.sh,.\Testscripts\Linux\utils.sh</files>
         <Platform>Azure</Platform>
         <Category>Functional</Category>
@@ -58,6 +70,9 @@
         <testScript>GPU-DRIVER-INSTALL.ps1</testScript>
         <setupType>TwoVM1Dep</setupType>
         <OverrideVMSize>Standard_NC6</OverrideVMSize>
+        <AdditionalHWConfig>
+            <DiskType>Managed</DiskType>
+        </AdditionalHWConfig>
         <files>.\Testscripts\Linux\gpu-driver-install.sh,.\Testscripts\Linux\utils.sh</files>
         <TestParameters>
             <param>CUDADriverVersion="CUDA_DRIVER"</param>
