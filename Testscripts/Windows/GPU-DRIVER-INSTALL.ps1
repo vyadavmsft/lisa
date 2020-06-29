@@ -95,6 +95,24 @@ function Start-Validation {
         -checkValues "PASS,FAIL,ABORTED" -testName $CurrentTestData.testName
     return $failureCount
     #endregion
+
+    #region nvidia-smi GRID license check
+    $nvidiasmi = Run-LinuxCmd -ip $allVMData.PublicIP -port $allVMData.SSHPort `
+        -username $superuser -password $password "nvidia-smi -q" -ignoreLinuxExitCode
+    Set-Content -Value $nvidiasmi -Path $LogDir\nvidia-smi-q.txt -Force
+    $gridEnabledCount = (Select-String -Path $LogDir\nvidia-smi-q.txt -Pattern "GRID enabled").Matches.Count
+    if ($gridEnabledCount -eq $expectedGPUCount) {
+        $currentResult = $resultPass
+    } else {
+        $currentResult = $resultFail
+        $failureCount += 1
+    }
+    $metaData = "nvidia-smi: Expected GRID-enabled GPUs: $expectedGPUCount, found inside the VM: $gridEnabledCount"
+    $resultArr += $currentResult
+    $CurrentTestResult.TestSummary += New-ResultSummary -testResult $currentResult -metaData $metaData `
+        -checkValues "PASS,FAIL,ABORTED" -testName $CurrentTestData.testName
+    return $failureCount
+    #endregion
 }
 
 function Collect-Logs {
@@ -249,6 +267,8 @@ function Main {
         $cpuGpuRatio = 6
         if ($allVMData.InstanceSize -imatch "Standard_ND40") {
             $cpuGpuRatio = 5
+        } elseif ($allVMData.InstanceSize -like "Standard_NV*_v3") {
+            $cpuGpuRatio = 12
         }
         [int]$expectedGPUCount = $($vmCPUCount/$cpuGpuRatio)
 
