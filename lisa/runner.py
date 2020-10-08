@@ -92,7 +92,7 @@ async def run(runbook: schema.Runbook) -> List[TestResult]:  # noqa: C901
             # try a case need new environment firstly
             for new_env_result in new_env_can_run_results:
                 if new_env_result.check_environment(environment, True):
-                    await _run_tests(environment=environment, tests=[new_env_result])
+                    _run_tests(environment=environment, tests=[new_env_result])
                     break
 
             # grouped test results by test case.
@@ -109,7 +109,7 @@ async def run(runbook: schema.Runbook) -> List[TestResult]:  # noqa: C901
                         and grouped_cases
                     ):
                         # run last batch cases
-                        await _run_tests(environment=environment, tests=grouped_cases)
+                        _run_tests(environment=environment, tests=grouped_cases)
                         grouped_cases = []
 
                     # append new test cases
@@ -117,7 +117,7 @@ async def run(runbook: schema.Runbook) -> List[TestResult]:  # noqa: C901
                     grouped_cases.append(test_result)
 
             if grouped_cases:
-                await _run_tests(environment=environment, tests=grouped_cases)
+                _run_tests(environment=environment, tests=grouped_cases)
         finally:
             if environment and environment.is_ready:
                 platform.delete_environment(environment)
@@ -149,7 +149,7 @@ async def run(runbook: schema.Runbook) -> List[TestResult]:  # noqa: C901
     return selected_test_results
 
 
-async def _run_tests(environment: Environment, tests: List[TestResult]) -> None:
+def _run_tests(environment: Environment, tests: List[TestResult]) -> None:
     assert tests
     case_metadata = tests[0].runtime_data.metadata.case
     test_case: LisaTestCase = case_metadata.test_class(
@@ -159,7 +159,7 @@ async def _run_tests(environment: Environment, tests: List[TestResult]) -> None:
     )
     for test in tests:
         test.env = environment.name
-    await test_case.start()
+    test_case.start()
 
 
 def _merge_test_requirements(

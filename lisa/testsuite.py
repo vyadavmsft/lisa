@@ -302,7 +302,7 @@ class LisaTestCase(unittest.TestCase):
     # We need to reduce this function's complexity to remove the
     # disabled warning, and not rely solely on side effects. Perhaps
     # we actually just want to reuse `unittest.TestCase.run()`?
-    async def start(self) -> None:  # noqa: C901
+    def start(self) -> None:  # noqa: C901
         suite_error_message = ""
         is_suite_continue = True
 
