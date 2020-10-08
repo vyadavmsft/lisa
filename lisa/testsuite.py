@@ -272,19 +272,22 @@ class LisaTestCase(unittest.TestCase):
 
     """
 
-    def __init__(
-        self,
-        environment: Environment,
-        case_results: List[TestResult],
-        metadata: LisaTestCaseMetadata,
-    ) -> None:
-        super().__init__()
-        self.environment = environment
-        # test cases to run, must be a test method in this class.
-        self.case_results = case_results
-        self._metadata = metadata
-        self._should_stop = False
-        self.log = get_logger("suite", metadata.name)
+    # def __init__(
+    #     self,
+    #     environment: Environment,
+    #     case_results: List[TestResult],
+    #     metadata: LisaTestCaseMetadata,
+    # ) -> None:
+    #     super().__init__()
+    #     self.environment = environment
+    #     # test cases to run, must be a test method in this class.
+    #     self.case_results = case_results
+    #     self._metadata = metadata
+    #     self._should_stop = False
+    #     self.log = get_logger("suite", metadata.name)
+
+    # def runTest(self):
+    #     super().runTest(self)
 
     def before_suite(self) -> None:
         pass
@@ -298,11 +301,20 @@ class LisaTestCase(unittest.TestCase):
     def after_case(self) -> None:
         pass
 
+    def run(self, result=None) -> unittest.TestResult:
+        result = super().run(result)
+        return result
+
     # TODO: This entire function is one long string of side-effects.
     # We need to reduce this function's complexity to remove the
     # disabled warning, and not rely solely on side effects. Perhaps
     # we actually just want to reuse `unittest.TestCase.run()`?
-    def start(self) -> None:  # noqa: C901
+    def start(
+        self, result: Optional[unittest.TestResult] = None
+    ) -> unittest.TestResult:  # noqa: C901
+        result = super().run(result)
+        return result
+
         suite_error_message = ""
         is_suite_continue = True
 

@@ -20,7 +20,9 @@ async def run(args: Namespace) -> int:
         notifier.initialize(runbooks=runbook.notifier)
 
     try:
-        results = await lisa.runner.run(runbook)
+        runner = lisa.runner.LisaRunner(verbosity=2)
+        results = runner.play(runbook)
+        # results = await lisa.runner.run(runbook)
     finally:
         notifier.finalize()
 

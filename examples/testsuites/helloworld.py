@@ -21,7 +21,7 @@ class HelloWorld(LisaTestCase):
         """,
         priority=0,
     )
-    def hello(self) -> None:
+    def test_hello(self) -> None:
         self.log.info(f"node count: {len(self.environment.nodes)}")
         node = self.environment.default_node
 
@@ -49,7 +49,7 @@ class HelloWorld(LisaTestCase):
         """,
         priority=1,
     )
-    def bye(self) -> None:
+    def test_bye(self) -> None:
         node = self.environment.default_node
         # use it once like this way before use short cut
         node.tools[Echo]

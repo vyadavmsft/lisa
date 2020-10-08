@@ -1,3 +1,4 @@
+import unittest
 from typing import Dict, List, Optional
 
 from lisa import schema, search_space
@@ -19,147 +20,155 @@ log = get_logger("runner")
 # TODO: This entire function is one long string of side-effects.
 # We need to reduce this function's complexity to remove the
 # disabled warning, and not rely solely on side effects.
-async def run(runbook: schema.Runbook) -> List[TestResult]:  # noqa: C901
-    # select test cases
-    selected_test_cases = select_testcases(runbook.testcase)
+class LisaRunner(unittest.TextTestRunner):
+    def play(self, runbook: schema.Runbook) -> List[TestResult]:  # noqa: C901
+        self.loader = unittest.loader.TestLoader()
+        # select test cases
+        selected_test_cases = select_testcases(runbook.testcase)
 
-    selected_test_results = [
-        TestResult(runtime_data=case) for case in selected_test_cases
-    ]
+        selected_test_results = [
+            TestResult(runtime_data=case) for case in selected_test_cases
+        ]
 
-    # load predefined environments
-    candidate_environments = load_environments(runbook.environment)
+        # load predefined environments
+        candidate_environments = load_environments(runbook.environment)
 
-    platform = load_platform(runbook.platform)
-    # get environment requirements
-    _merge_test_requirements(
-        test_results=selected_test_results,
-        existing_environments=candidate_environments,
-        platform_type=platform.type_name(),
-    )
+        platform = load_platform(runbook.platform)
+        # get environment requirements
+        _merge_test_requirements(
+            test_results=selected_test_results,
+            existing_environments=candidate_environments,
+            platform_type=platform.type_name(),
+        )
 
-    # there may not need to handle requirements, if all environment are predefined
-    prepared_environments = platform.prepare_environments(candidate_environments)
+        # there may not need to handle requirements, if all environment are predefined
+        prepared_environments = platform.prepare_environments(candidate_environments)
 
-    can_run_results = selected_test_results
-    # request environment then run test s
-    for environment in prepared_environments:
-        try:
-            is_needed: bool = False
-            can_run_results = [x for x in can_run_results if x.can_run]
-            can_run_results.sort(key=lambda x: x.runtime_data.metadata.case.name)
-            new_env_can_run_results = [
-                x for x in can_run_results if x.runtime_data.use_new_environment
-            ]
-
-            if not can_run_results:
-                # no left tests, break the loop
-                log.debug(f"no more test case to run, skip env [{environment.name}]")
-                break
-
-            # check if any test need this environment
-            if any(
-                case.can_run and case.check_environment(environment, True)
-                for case in can_run_results
-            ):
-                is_needed = True
-
-            if not is_needed:
-                log.debug(
-                    f"env[{environment.name}] skipped "
-                    f"as not meet any case requirement"
-                )
-                continue
-
+        can_run_results = selected_test_results
+        # request environment then run test s
+        for environment in prepared_environments:
             try:
-                platform.deploy_environment(environment)
-            except WaitMoreResourceError as identifier:
-                log.warning(
-                    f"[{environment.name}] waiting for more resource: "
-                    f"{identifier}, skip assiging case"
-                )
-                continue
+                is_needed: bool = False
+                can_run_results = [x for x in can_run_results if x.can_run]
+                can_run_results.sort(key=lambda x: x.runtime_data.metadata.case.name)
+                new_env_can_run_results = [
+                    x for x in can_run_results if x.runtime_data.use_new_environment
+                ]
 
-            if not environment.is_ready:
-                log.warning(
-                    f"[{environment.name}] is not deployed successfully, "
-                    f"skip assiging case"
-                )
-                continue
-
-            # once environment is ready, check updated capability
-            log.info(f"start running cases on {environment.name}")
-            # try a case need new environment firstly
-            for new_env_result in new_env_can_run_results:
-                if new_env_result.check_environment(environment, True):
-                    _run_tests(environment=environment, tests=[new_env_result])
+                if not can_run_results:
+                    # no left tests, break the loop
+                    log.debug(
+                        f"no more test case to run, skip env [{environment.name}]"
+                    )
                     break
 
-            # grouped test results by test case.
-            grouped_cases: List[TestResult] = []
-            current_case: Optional[LisaTestCaseMetadata] = None
-            for test_result in can_run_results:
-                if (
-                    test_result.can_run
-                    and test_result.check_environment(environment, True)
-                    and not test_result.runtime_data.use_new_environment
+                # check if any test need this environment
+                if any(
+                    case.can_run and case.check_environment(environment, True)
+                    for case in can_run_results
                 ):
+                    is_needed = True
+
+                if not is_needed:
+                    log.debug(
+                        f"env[{environment.name}] skipped "
+                        f"as not meet any case requirement"
+                    )
+                    continue
+
+                try:
+                    platform.deploy_environment(environment)
+                except WaitMoreResourceError as identifier:
+                    log.warning(
+                        f"[{environment.name}] waiting for more resource: "
+                        f"{identifier}, skip assiging case"
+                    )
+                    continue
+
+                if not environment.is_ready:
+                    log.warning(
+                        f"[{environment.name}] is not deployed successfully, "
+                        f"skip assiging case"
+                    )
+                    continue
+
+                # once environment is ready, check updated capability
+                log.info(f"start running cases on {environment.name}")
+                # try a case need new environment firstly
+                for new_env_result in new_env_can_run_results:
+                    if new_env_result.check_environment(environment, True):
+                        self._run_tests(environment=environment, tests=[new_env_result])
+                        break
+
+                # grouped test results by test case.
+                grouped_cases: List[TestResult] = []
+                current_case: Optional[LisaTestCaseMetadata] = None
+                for test_result in can_run_results:
                     if (
-                        test_result.runtime_data.metadata.case != current_case
-                        and grouped_cases
+                        test_result.can_run
+                        and test_result.check_environment(environment, True)
+                        and not test_result.runtime_data.use_new_environment
                     ):
-                        # run last batch cases
-                        _run_tests(environment=environment, tests=grouped_cases)
-                        grouped_cases = []
+                        if (
+                            test_result.runtime_data.metadata.case != current_case
+                            and grouped_cases
+                        ):
+                            # run last batch cases
+                            self._run_tests(
+                                environment=environment, tests=grouped_cases
+                            )
+                            grouped_cases = []
 
-                    # append new test cases
-                    current_case = test_result.runtime_data.metadata.case
-                    grouped_cases.append(test_result)
+                        # append new test cases
+                        current_case = test_result.runtime_data.metadata.case
+                        grouped_cases.append(test_result)
 
-            if grouped_cases:
-                _run_tests(environment=environment, tests=grouped_cases)
-        finally:
-            if environment and environment.is_ready:
-                platform.delete_environment(environment)
+                if grouped_cases:
+                    self._run_tests(environment=environment, tests=grouped_cases)
+            finally:
+                if environment and environment.is_ready:
+                    platform.delete_environment(environment)
 
-    # not run as there is no fit environment.
-    for test in can_run_results:
-        if test.can_run:
-            reasons = "no available environment"
-            if test.check_results and test.check_results.reasons:
-                reasons = f"{reasons}: {test.check_results.reasons}"
+        # not run as there is no fit environment.
+        for test in can_run_results:
+            if test.can_run:
+                reasons = "no available environment"
+                if test.check_results and test.check_results.reasons:
+                    reasons = f"{reasons}: {test.check_results.reasons}"
 
-            test.set_status(TestStatus.SKIPPED, reasons)
+                test.set_status(TestStatus.SKIPPED, reasons)
 
-    result_count_dict: Dict[TestStatus, int] = dict()
-    for test_result in selected_test_results:
-        log.info(
-            f"{test_result.runtime_data.metadata.full_name:>30}: "
-            f"{test_result.status.name:<8} {test_result.message}"
-        )
-        result_count = result_count_dict.get(test_result.status, 0)
-        result_count += 1
-        result_count_dict[test_result.status] = result_count
+        result_count_dict: Dict[TestStatus, int] = dict()
+        for test_result in selected_test_results:
+            log.info(
+                f"{test_result.runtime_data.metadata.full_name:>30}: "
+                f"{test_result.status.name:<8} {test_result.message}"
+            )
+            result_count = result_count_dict.get(test_result.status, 0)
+            result_count += 1
+            result_count_dict[test_result.status] = result_count
 
-    log.info("test result summary")
-    log.info(f"  TOTAL      : {len(selected_test_results)}")
-    for key in TestStatus:
-        log.info(f"    {key.name:<9}: {result_count_dict.get(key, 0)}")
+        log.info("test result summary")
+        log.info(f"  TOTAL      : {len(selected_test_results)}")
+        for key in TestStatus:
+            log.info(f"    {key.name:<9}: {result_count_dict.get(key, 0)}")
 
-    return selected_test_results
+        return selected_test_results
 
-
-def _run_tests(environment: Environment, tests: List[TestResult]) -> None:
-    assert tests
-    case_metadata = tests[0].runtime_data.metadata.case
-    test_case: LisaTestCase = case_metadata.test_class(
-        environment,
-        tests,
-        case_metadata,
-    )
-    for test in tests:
-        test.env = environment.name
-    test_case.start()
+    def _run_tests(
+        self, environment: Environment, tests: List[TestResult]
+    ) -> unittest.TextTestResult:
+        assert tests
+        case_metadata = tests[0].runtime_data.metadata.case
+        # test_case: LisaTestCase = case_metadata.test_class(
+        #     environment,
+        #     tests,
+        #     case_metadata,
+        # )
+        # for test in tests:
+        #     test.env = environment.name
+        loaded_case = self.loader.loadTestsFromTestCase(case_metadata.test_class)
+        return super().run(loaded_case)
 
 
 def _merge_test_requirements(

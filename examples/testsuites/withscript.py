@@ -31,7 +31,7 @@ class WithScript(LisaTestCase):
         priority=1,
         requirement=simple_requirement(unsupported_os=[Windows]),
     )
-    def script(self) -> None:
+    def test_script(self) -> None:
         node = self.environment.default_node
         timer1 = create_timer()
         script: CustomScript = node.tools[self._echo_script]
