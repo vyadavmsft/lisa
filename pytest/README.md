@@ -66,13 +66,18 @@ implement (with more as found to be required):
 * Run a command (perhaps asynchronously) on the node using SSH
 * Download and upload files to the node (with retries and timeouts)
 
-Our abstraction would leverage
+Our abstraction leverages
 [Fabric](https://docs.fabfile.org/en/stable/index.html), which uses
 [paramiko](https://docs.paramiko.org/en/stable/) underneath, directly to
-implement the SSH commands. For deployment logic, it would use existing Python APIs to deploy
-[Azure](https://aka.ms/azsdk/python/all) nodes, and for Hyper-V (and other
-virtualization platforms), it would use
+implement the SSH commands. For deployment logic, it uses the [`az`
+CLI](https://aka.ms/azureclidocs), wrapped by Fabric. For Hyper-V (and other
+virtualization platforms), it could use
 [libvirt](https://libvirt.org/python.html).
+
+We do not use the [Azure Python APIs](https://aka.ms/azsdk/python/all) directly
+because they are more complicated (and less documented) than the `az` CLI. Given
+Fabric (and its underlying Invoke library), the CLI becomes incredibly easy to
+work with.
 
 Other test specific requirements, such as installing software and daemons,
 downloading files from remote storage, or checking the state of our Bash test
