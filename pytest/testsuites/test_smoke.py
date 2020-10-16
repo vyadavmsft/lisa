@@ -1,7 +1,9 @@
 """Runs a 'smoke' test for an Azure Linux VM deployment."""
+import logging
 import platform
 import socket
 
+from invoke import UnexpectedExit
 from invoke.runners import Result  # type: ignore
 from paramiko import SSHException  # type: ignore
 
@@ -10,7 +12,8 @@ from node_plugin import Node
 
 
 @pytest.mark.deploy(setup="OneVM", vm_size="Standard_DS2_v2")
-def test_smoke(node: Node) -> None:
+@pytest.mark.usefixtures("class_node")
+class TestSmoke:
     """Check that a VM can be deployed and is responsive.
 
     1. Deploy the VM (via 'node' fixture) and log it.
@@ -19,36 +22,39 @@ def test_smoke(node: Node) -> None:
     4. Attempt to reboot via SSH, otherwise use the platform.
     5. Fetch the serial console logs.
 
-    For commands where we expect a possible non-zero exit code, we
-    pass 'warn=True' to prevent it from throwing 'UnexpectedExit' and
-    we instead check its result at the end.
-
-    SSH failures DO NOT fail this test.
-    TODO: Log warnings instead of printing.
     """
+
+    n: Node
+
     # TODO: Move to ‘Node.ping()’
     ping_flag = "-c 1" if platform.system() == "Linux" else "-n 1"
-    # TODO: Can’t ping by default, need to enable.
-    ping1_result: Result = node.local(f"ping {ping_flag} {node.host}", warn=True)
 
-    try:
-        node.run("uptime")  # If SSH fails, we catch it.
-        reboot_result: Result = node.sudo("reboot", warn=True)  # Expect -1
-    except (TimeoutError, SSHException, socket.error) as e:
-        print(f"SSH failed '{e}', using platform to reboot...")
-        node.platform_restart()
+    def test_ping_1(self) -> None:
+        # TODO: Can’t ping by default, need to enable.
+        logging.warn("Expecting ping to fail because it's not enabled yet")
+        r: Result = self.n.local(f"ping {self.ping_flag} {self.n.host}", warn=True)
+        assert r.ok, f"Pinging {self.n.host} failed"
 
-    # Try pinging and SSH again.
-    ping2_result: Result = node.local(f"ping {ping_flag} {node.host}", warn=True)
+    def test_ssh_1(self) -> None:
+        self.n.run("uptime")
 
-    try:
-        node.run("uptime")
-    except (TimeoutError, SSHException, socket.error) as e:
-        print(f"SSH failed '{e}' after the reboot.")
+    def test_reboot(self) -> None:
+        try:
+            # If this succeeds, we should expect the exit code to be -1
+            r: Result = self.n.sudo("reboot")
+        except UnexpectedExit:
+            assert r.exited == -1, "While SSH worked, reboot failed"
+        except (TimeoutError, SSHException, socket.error) as e:
+            logging.warn(f"SSH failed '{e}', using platform to reboot")
+            self.n.platform_restart()
 
-    # Always download the serial console logs.
-    node.get_boot_diagnostics()
+    def test_ping_2(self) -> None:
+        # TODO: Can’t ping by default, need to enable.
+        r: Result = self.n.local(f"ping {self.ping_flag} {self.n.host}", warn=True)
+        assert r.ok, f"Pinging {self.n.host} failed"
 
-    assert ping1_result.ok
-    assert reboot_result.exited == -1, "Reboot failed, used platform instead"
-    assert ping2_result.ok
+    def test_ssh_2(self) -> None:
+        self.n.run("uptime")
+
+    def test_serial_log(self) -> None:
+        self.n.get_boot_diagnostics()
