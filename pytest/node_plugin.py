@@ -147,8 +147,36 @@ class Node(Connection):
             return buf.getvalue().decode("utf-8").strip()
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def node(request: FixtureRequest) -> Iterator[Node]:
+    key, name, host, data, fabric_config = get_node(request)
+    with Node(host, config=fabric_config, inline_ssh_env=True) as n:
+        n.name = name
+        n.data = data
+        yield n
+
+    # Clean up!
+    if not request.config.getoption("keep_vms") and key:
+        delete_vm(name)
+        assert request.config.cache is not None
+        request.config.cache.set(key, None)
+
+
+@pytest.fixture(scope="class")
+def class_node(request: FixtureRequest) -> None:
+    key, name, host, data, fabric_config = get_node(request)
+    with Node(host, config=fabric_config, inline_ssh_env=True) as n:
+        request.cls.n = n
+        yield
+
+    # Clean up!
+    if not request.config.getoption("keep_vms") and key:
+        delete_vm(name)
+        assert request.config.cache is not None
+        request.config.cache.set(key, None)
+
+
+def get_node(request: FixtureRequest):
     """Yields a safe remote Node on which to run commands.
 
     TODO: Currently this also manages the caching of the deployed VMs.
@@ -199,13 +227,4 @@ def node(request: FixtureRequest) -> Iterator[Node]:
         "PATH": "/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin"
     }
     fabric_config = fabric.Config(overrides=ssh_config)
-    with Node(host, config=fabric_config, inline_ssh_env=True) as n:
-        n.name = name
-        n.data = data
-        yield n
-
-    # Clean up!
-    if not request.config.getoption("keep_vms") and key:
-        delete_vm(name)
-        assert request.config.cache is not None
-        request.config.cache.set(key, None)
+    return key, name, host, data, fabric_config
