@@ -9,24 +9,10 @@ from paramiko import SSHException  # type: ignore
 import pytest
 from node_plugin import Node
 
-# TODO: This is an example of leveraging Pytest’s parameterization
-# support. We can implement a small YAML parser to read a playbook at
-# runtime to generate this instead of using the below list.
-params = [
-    pytest.param(i, marks=pytest.mark.deploy(vm_image=i, vm_size="Standard_DS2_v2"))
-    for i in [
-        "citrix:netscalervpx-130:netscalerbyol:latest",
-        "audiocodes:mediantsessionbordercontroller:mediantvirtualsbcazure:latest",
-        "credativ:Debian:9:9.0.201706190",
-        "github:github-enterprise:github-enterprise:latest",
-    ]
-]
-
 
 @pytest.mark.lisa(priority=0)
-@pytest.mark.parametrize("urn", params)
 @pytest.mark.flaky(reruns=1)
-def test_smoke(urn: str, node: Node) -> None:
+def test_smoke(node: Node) -> None:
     """Check that a VM can be deployed and is responsive.
 
     1. Deploy the VM (via 'node' fixture) and log it.

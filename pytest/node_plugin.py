@@ -193,11 +193,60 @@ class Node(Connection):
             return buf.getvalue().decode("utf-8").strip()
 
 
-# TODO: The fixtures need to be fixed up since we now have a pair, one
-# for each scope. They need documentation and de-duplication too.
-@pytest.fixture(scope="function")
+# TODO: This is an example of leveraging Pytest’s parameterization
+# support. We can implement a small YAML parser to read a playbook at
+# runtime to generate this instead of using the below list.
+params = [
+    pytest.param({"vm_image": i, "vm_size": "Standard_DS2_v2"})
+    for i in [
+        "citrix:netscalervpx-130:netscalerbyol:latest",
+        "audiocodes:mediantsessionbordercontroller:mediantvirtualsbcazure:latest",
+        "credativ:Debian:9:9.0.201706190",
+        "github:github-enterprise:github-enterprise:latest",
+    ]
+]
+
+# TODO: The fixture needs to be fixed up and `Node` refactored.
+@pytest.fixture(scope="session", params=params)
 def node(request: FixtureRequest) -> Iterator[Node]:
-    key, name, host, data, fabric_config = get_node(request)
+    """Yields a safe remote Node on which to run commands.
+
+    TODO: Currently this also manages the caching of the deployed VMs.
+    However, we should make a node pool (perhaps a session-scoped
+    fixture) which caches and deploys VMs, leaving this to perform its
+    original work as a connection creator.
+
+    """
+    key: Optional[str] = None
+    data: Dict[str, str] = dict()
+    name: Optional[str] = None
+    host: Optional[str] = None
+
+    # NOTE: https://docs.pytest.org/en/stable/cache.html
+    key = "/".join(["node"] + list(filter(None, request.param.values())))
+    assert request.config.cache is not None
+    data = request.config.cache.get(key, None)
+    if data:
+        logging.info(f"Reusing node for cached key '{key}'")
+    else:
+        # Cache miss, deploy new node...
+        name = f"pytest-{uuid4()}"
+        host, data = deploy_vm(name, **request.param)
+        data["name"] = name
+        data["host"] = host
+        request.config.cache.set(key, data)
+    name = data["name"]
+    host = data["host"]
+
+    # Yield the configured Node connection.
+    ssh_config: Dict[str, Any] = config.copy()
+    ssh_config["run"]["env"] = {
+        # Set PATH since it’s not a login shell.
+        "PATH": "/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin"
+    }
+    fabric_config = fabric.Config(overrides=ssh_config)
+
+    logging.info(f"Using VM at: '{host}'")
     with Node(host, config=fabric_config, inline_ssh_env=True) as n:
         n.name = name
         n.data = data
@@ -208,87 +257,3 @@ def node(request: FixtureRequest) -> Iterator[Node]:
         assert request.config.cache is not None
         request.config.cache.set(key, None)
         delete_vm(name)
-
-
-# TODO: Delete this and resurrect at a later date if we need it again.
-@pytest.fixture(scope="class")
-def class_node(request: FixtureRequest) -> Iterator[None]:
-    key, name, host, data, fabric_config = get_node(request)
-    with Node(host, config=fabric_config, inline_ssh_env=True) as n:
-        n.name = name
-        n.data = data
-        request.cls.n = n
-        logging.info(f"Using VM at: '{host}'")
-        try:
-            r: Result = n.run("uname -r")
-        except Exception as e:
-            logging.warning(f"Kernel Version: Unknown due to '{e}'")
-        else:
-            assert r.ok
-            logging.info(f"Kernel Version: '{r.stdout.strip()}'")
-        yield
-
-    # Clean up!
-    if not request.config.getoption("keep_vms") and key:
-        assert request.config.cache is not None
-        request.config.cache.set(key, None)
-        delete_vm(name)
-
-
-def get_node(
-    request: FixtureRequest,
-) -> Tuple[Optional[str], str, Optional[str], Dict[str, str], fabric.Config]:
-    """Yields a safe remote Node on which to run commands.
-
-    TODO: Currently this also manages the caching of the deployed VMs.
-    However, we should make a node pool (perhaps a session-scoped
-    fixture) which caches and deploys VMs, leaving this to perform its
-    original work as a connection creator.
-
-    TODO: It's return type is garbage.
-    """
-    deploy_marker = request.node.get_closest_marker("deploy")
-    connect_marker = request.node.get_closest_marker("connect")
-
-    key: Optional[str] = None
-    data: Dict[str, str] = dict()
-    name: Optional[str] = None
-    host: Optional[str] = None
-
-    # TODO: The deploy and connect markers should be mutually
-    # exclusive.
-    if deploy_marker:
-        # NOTE: https://docs.pytest.org/en/stable/cache.html
-        key = "/".join(["node"] + list(filter(None, deploy_marker.kwargs.values())))
-        assert request.config.cache is not None
-        data = request.config.cache.get(key, None)
-        if data:
-            logging.info(f"Reusing node for cached key '{key}'")
-        else:
-            # Cache miss, deploy new node...
-            name = f"pytest-{uuid4()}"
-            host, data = deploy_vm(name, **deploy_marker.kwargs)
-            data["name"] = name
-            data["host"] = host
-            request.config.cache.set(key, data)
-        name = data["name"]
-        host = data["host"]
-    elif connect_marker:
-        # Get the host from the test’s marker.
-        host = connect_marker.args[0]
-        name = f"pre-deployed:{host}"
-    else:
-        # NOTE: This still uses SSH so the localhost must be
-        # connectable.
-        host = "localhost"
-        name = host
-
-    # Yield the configured Node connection.
-    ssh_config: Dict[str, Any] = config.copy()
-    ssh_config["run"]["env"] = {
-        # Set PATH since it’s not a login shell.
-        "PATH": "/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin"
-    }
-    fabric_config = fabric.Config(overrides=ssh_config)
-    logging.info(f"Using VM at: '{host}'")
-    return key, name, host, data, fabric_config
