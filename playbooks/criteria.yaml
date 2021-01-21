@@ -1,0 +1,10 @@
+# NOTE: This is an adjusted proof-of-concept ask from Chi.
+criteria:
+  # Select all Priority 0 tests.
+  - priority: 0
+  # Run tests with 'smoke' in the name twice.
+  - name: smoke
+    times: 2
+  # Exclude all tests in Area "xdp"
+  - area: xdp
+    exclude: true

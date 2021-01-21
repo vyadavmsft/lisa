@@ -1,0 +1,15 @@
+platforms:
+  AzureCLI:
+    sku: Standard_DS2_v2
+
+targets:
+  - name: Debian
+    platform: AzureCLI
+    image: credativ:Debian:9:9.0.201706190
+
+  - name: Ubuntu
+    platform: AzureCLI
+    image: Canonical:UbuntuServer:18.04-LTS:latest
+
+criteria:
+    - module: test_smoke_b

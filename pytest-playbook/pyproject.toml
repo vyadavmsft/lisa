@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "pytest-playbook"
+version = "0.1.1"
+description = "Pytest plugin for reading playbooks."
+license = "MIT"
+authors = ["Andrew Schwartzmeyer <andrew@schwartzmeyer.com>"]
+readme = "README.md"
+homepage = "https://microsoft.github.io/lisa"
+repository = "https://github.com/microsoft/lisa/tree/andschwa/pytest/pytest-playbook"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Utilities"
+]
+packages = [{include = "playbook.py"}]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+pytest = "^6.1.2"
+schema = "0.7.2"
+PyYAML = "^5.3.1"
+
+[tool.poetry.dev-dependencies]
+
+[tool.poetry.plugins]
+pytest11 = {playbook = "playbook"}
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

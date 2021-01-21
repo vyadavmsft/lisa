@@ -1,0 +1,5 @@
+targets:
+  - name: Local Tests
+    platform: SSH
+  - name: Setup Plan
+    platform: Custom
