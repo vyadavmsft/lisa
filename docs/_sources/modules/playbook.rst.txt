@@ -1,0 +1,43 @@
+﻿playbook
+========
+
+.. automodule:: playbook
+
+   
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      data
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      pytest_addhooks
+      pytest_addoption
+      pytest_configure
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Hooks
+   
+   
+
+   
+   
+   
+
+
+

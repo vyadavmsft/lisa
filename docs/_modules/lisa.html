@@ -1,0 +1,456 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>lisa &#8212; LISA 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lisa</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) Microsoft Corporation.</span>
+<span class="c1"># Licensed under the MIT License.</span>
+<span class="sd">&quot;&quot;&quot;A plugin for organizing, analyzing, and selecting tests.</span>
+
+<span class="sd">This plugin provides the mark ``pytest.mark.lisa``, aliased as</span>
+<span class="sd">:py:func:`LISA`, for marking up tests metadata beyond that which</span>
+<span class="sd">Pytest provides by default. See the :py:data:`lisa_schema` for the</span>
+<span class="sd">expected metadata input.</span>
+
+<span class="sd">Tests can be selected through a ``playbook.yaml`` file using the</span>
+<span class="sd">criteria schema (using the `pytest-playbook`_ plugin). For example:</span>
+
+<span class="sd">.. _pytest-playbook: https://microsoft.github.io/lisa/modules/playbook.html</span>
+
+<span class="sd">.. code-block:: yaml</span>
+
+<span class="sd">   criteria:</span>
+<span class="sd">     # Select all Priority 0 tests.</span>
+<span class="sd">     - priority: 0</span>
+<span class="sd">     # Run tests with &#39;smoke&#39; in the name twice.</span>
+<span class="sd">     - name: smoke</span>
+<span class="sd">       times: 2</span>
+<span class="sd">     # Exclude all tests in Area &quot;xdp&quot;</span>
+<span class="sd">     - area: xdp</span>
+<span class="sd">       exclude: true</span>
+
+<span class="sd">.. TODO::</span>
+
+<span class="sd">   * Review the ``criteria`` schema.</span>
+<span class="sd">   * Provide test metadata statistics via a command-line flag.</span>
+<span class="sd">   * Assert every test has a LISA marker.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">typing</span>
+
+<span class="kn">import</span> <span class="nn">playbook</span>
+<span class="kn">import</span> <span class="nn">py</span>
+<span class="kn">import</span> <span class="nn">pytest</span>
+<span class="kn">from</span> <span class="nn">schema</span> <span class="kn">import</span> <span class="n">And</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Or</span><span class="p">,</span> <span class="n">Schema</span><span class="p">,</span> <span class="n">SchemaError</span>  <span class="c1"># type: ignore</span>
+
+<span class="c1"># TODO: Importing `xdist` here causes a `PytestAssertRewriteWarning`</span>
+<span class="c1"># to be thrown, which we ignore for now.</span>
+<span class="kn">from</span> <span class="nn">xdist.scheduler.loadscope</span> <span class="kn">import</span> <span class="n">LoadScopeScheduling</span>  <span class="c1"># type: ignore</span>
+
+<span class="k">if</span> <span class="n">typing</span><span class="o">.</span><span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span>
+
+    <span class="kn">from</span> <span class="nn">_pytest.config</span> <span class="kn">import</span> <span class="n">Config</span>
+    <span class="kn">from</span> <span class="nn">_pytest.mark.structures</span> <span class="kn">import</span> <span class="n">Mark</span>
+    <span class="kn">from</span> <span class="nn">pytest</span> <span class="kn">import</span> <span class="n">Item</span><span class="p">,</span> <span class="n">Session</span>
+
+<span class="n">LISA</span> <span class="o">=</span> <span class="n">pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">lisa</span>
+<span class="sd">&quot;&quot;&quot;Alias for the Pytest mark ``lisa``.&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../modules/lisa.html#lisa.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Wrapper function so we can have a ``lisa`` binary.&quot;&quot;&quot;</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">pytest</span><span class="o">.</span><span class="n">main</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="pytest_configure"><a class="viewcode-back" href="../modules/lisa.html#lisa.pytest_configure">[docs]</a><span class="k">def</span> <span class="nf">pytest_configure</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Pytest `configure hook`_ to perform initial configuration.</span>
+
+<span class="sd">    .. _configure hook: https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_configure</span>
+
+<span class="sd">    We&#39;re registering our custom marker so that it passes</span>
+<span class="sd">    ``--strict-markers``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">addinivalue_line</span><span class="p">(</span>
+        <span class="s2">&quot;markers&quot;</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="s2">&quot;lisa(platform, category, area, priority, tags): &quot;</span>
+            <span class="s2">&quot;Annotate a test with metadata.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="pytest_playbook_schema"><a class="viewcode-back" href="../modules/lisa.html#lisa.pytest_playbook_schema">[docs]</a><span class="k">def</span> <span class="nf">pytest_playbook_schema</span><span class="p">(</span><span class="n">schema</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;:py:meth:`~playbook.Hooks.pytest_playbook_schema` hook to update the playbook schema.&quot;&quot;&quot;</span>
+    <span class="c1"># TODO: We also want to support a ‘targets’ list that confines a</span>
+    <span class="c1"># test selection to only the given targets.</span>
+    <span class="n">criteria_schema</span> <span class="o">=</span> <span class="n">Schema</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="c1"># TODO: Should any/all of the strings be regex comparisons?</span>
+            <span class="n">Optional</span><span class="p">(</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Substring match of test name.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span>
+            <span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">Optional</span><span class="p">(</span>
+                <span class="s2">&quot;module&quot;</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Substring match of test file (Python module).&quot;</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">Optional</span><span class="p">(</span>
+                <span class="s2">&quot;area&quot;</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Case-folded equality comparison of test&#39;s area.&quot;</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">Optional</span><span class="p">(</span>
+                <span class="s2">&quot;category&quot;</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Case-folded equality comparison of test&#39;s category.&quot;</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">Optional</span><span class="p">(</span>
+                <span class="s2">&quot;priority&quot;</span><span class="p">,</span>
+                <span class="c1"># TODO: Should this instead be a range comparison?</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Equality comparison of test&#39;s priority.&quot;</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="p">):</span> <span class="nb">int</span><span class="p">,</span>
+            <span class="n">Optional</span><span class="p">(</span>
+                <span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Subset comparison of test&#39;s tags.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">list</span>
+            <span class="p">):</span> <span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+            <span class="n">Optional</span><span class="p">(</span>
+                <span class="s2">&quot;times&quot;</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Number of times to run the matched tests.&quot;</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="p">):</span> <span class="nb">int</span><span class="p">,</span>
+            <span class="n">Optional</span><span class="p">(</span>
+                <span class="s2">&quot;exclude&quot;</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Exclude the matched tests instead.&quot;</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">):</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+    <span class="n">schema</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">Optional</span><span class="p">(</span><span class="s2">&quot;criteria&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">list</span><span class="p">):</span> <span class="p">[</span><span class="n">criteria_schema</span><span class="p">]})</span></div>
+
+
+<span class="n">lisa_schema</span> <span class="o">=</span> <span class="n">Schema</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="n">Literal</span><span class="p">(</span><span class="s2">&quot;platform&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The test&#39;s intended platform.&quot;</span><span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">Literal</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The kind of test this is.&quot;</span><span class="p">):</span> <span class="n">Or</span><span class="p">(</span>
+            <span class="s2">&quot;Functional&quot;</span><span class="p">,</span> <span class="s2">&quot;Performance&quot;</span><span class="p">,</span> <span class="s2">&quot;Stress&quot;</span><span class="p">,</span> <span class="s2">&quot;Community&quot;</span><span class="p">,</span> <span class="s2">&quot;Longhaul&quot;</span>
+        <span class="p">),</span>
+        <span class="n">Literal</span><span class="p">(</span><span class="s2">&quot;area&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The test&#39;s area (or &#39;feature&#39;).&quot;</span><span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">Literal</span><span class="p">(</span>
+            <span class="s2">&quot;priority&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The test&#39;s priority with 0 being the highest.&quot;</span>
+        <span class="p">):</span> <span class="n">Or</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+        <span class="n">Optional</span><span class="p">(</span>
+            <span class="s2">&quot;tags&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;An arbitrary set of tags used for selection.&quot;</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="p">[],</span>
+        <span class="p">):</span> <span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="c1"># TODO: Consider just making users set this manually.</span>
+        <span class="n">Optional</span><span class="p">(</span>
+            <span class="s2">&quot;features&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A set of required features, passed to `pytest.mark.target`.&quot;</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="p">[],</span>
+        <span class="p">):</span> <span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">Optional</span><span class="p">(</span>
+            <span class="s2">&quot;reuse&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Set to false if the target is made unusable.&quot;</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">):</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">Optional</span><span class="p">(</span>
+            <span class="s2">&quot;count&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Number of targets this test needs.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span>
+        <span class="p">):</span> <span class="n">And</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">),</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;Schema used to validate a test&#39;s metadata.&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="validate_mark"><a class="viewcode-back" href="../modules/lisa.html#lisa.validate_mark">[docs]</a><span class="k">def</span> <span class="nf">validate_mark</span><span class="p">(</span><span class="n">mark</span><span class="p">:</span> <span class="n">Mark</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Validate each test&#39;s :py:func:`LISA` parameters.&quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="ow">not</span> <span class="n">mark</span><span class="o">.</span><span class="n">args</span><span class="p">,</span> <span class="s2">&quot;LISA marker cannot have positional arguments!&quot;</span>
+    <span class="n">mark</span><span class="o">.</span><span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">lisa_schema</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">mark</span><span class="o">.</span><span class="n">kwargs</span><span class="p">))</span>  <span class="c1"># type: ignore</span></div>
+
+
+<div class="viewcode-block" id="pytest_collection_modifyitems"><a class="viewcode-back" href="../modules/lisa.html#lisa.pytest_collection_modifyitems">[docs]</a><span class="k">def</span> <span class="nf">pytest_collection_modifyitems</span><span class="p">(</span>
+    <span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">,</span> <span class="n">items</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Item</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Pytest `collection modifyitems hook`_ for modifying the selected items (tests).</span>
+
+<span class="sd">    .. _collection modifyitems hook: https://docs.pytest.org/en/latest/reference.html#pytest.hookspec.pytest_collection_modifyitems</span>
+
+<span class="sd">    First we validate all the :py:func:`LISA` marks on the collected</span>
+<span class="sd">    tests. Then we parse the given ``criteria`` in the playbook to</span>
+<span class="sd">    include or exclude tests. We do not care if the ``platform``</span>
+<span class="sd">    mismatches because we intend a multiplicative effect where all</span>
+<span class="sd">    selected tests in a playbook are run on all the targets.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># TODO: The ‘Item’ object has a ‘user_properties’ attribute which</span>
+    <span class="c1"># is a list of tuples and could be used to hold the validated</span>
+    <span class="c1"># marker data, simplifying later usage.</span>
+
+    <span class="c1"># Validate all LISA marks.</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">mark</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get_closest_marker</span><span class="p">(</span><span class="s2">&quot;lisa&quot;</span><span class="p">)</span>
+            <span class="c1"># TODO: `assert mark, &quot;LISA marker is missing!&quot;` but not</span>
+            <span class="c1"># all tests will have it, such as static analysis tests.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">mark</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">validate_mark</span><span class="p">(</span><span class="n">mark</span><span class="p">)</span>
+            <span class="c1"># Forward args to `pytest.mark.target` so LISA users don’t</span>
+            <span class="c1"># need to use two marks, but keep them decoupled.</span>
+            <span class="c1">#</span>
+            <span class="c1"># NOTE: The module and class scoped target fixtures won’t</span>
+            <span class="c1"># work with this, because the mark will need to be applied</span>
+            <span class="c1"># at that scope, and this applies on the function.</span>
+            <span class="n">kw</span> <span class="o">=</span> <span class="n">mark</span><span class="o">.</span><span class="n">kwargs</span>
+            <span class="n">item</span><span class="o">.</span><span class="n">add_marker</span><span class="p">(</span>
+                <span class="n">pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">target</span><span class="p">(</span>
+                    <span class="n">features</span><span class="o">=</span><span class="n">kw</span><span class="p">[</span><span class="s2">&quot;features&quot;</span><span class="p">],</span> <span class="n">reuse</span><span class="o">=</span><span class="n">kw</span><span class="p">[</span><span class="s2">&quot;reuse&quot;</span><span class="p">],</span> <span class="n">count</span><span class="o">=</span><span class="n">kw</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">SchemaError</span><span class="p">,</span> <span class="ne">AssertionError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">pytest</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error validating test &#39;</span><span class="si">{</span><span class="n">item</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; metadata: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Optionally select tests based on a playbook.</span>
+    <span class="n">included</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Item</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">excluded</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Item</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">select</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="n">Item</span><span class="p">,</span> <span class="n">times</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">exclude</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Includes or excludes the item as appropriate.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">exclude</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Excluding &#39;</span><span class="si">{</span><span class="n">item</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+            <span class="n">excluded</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Including &#39;</span><span class="si">{</span><span class="n">item</span><span class="si">}</span><span class="s2">&#39; </span><span class="si">{</span><span class="n">times</span><span class="si">}</span><span class="s2"> times&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">times</span> <span class="o">-</span> <span class="n">included</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">item</span><span class="p">)):</span>
+                <span class="n">included</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">playbook</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;criteria&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
+            <span class="n">mark</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get_closest_marker</span><span class="p">(</span><span class="s2">&quot;lisa&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">mark</span><span class="p">:</span>
+                <span class="c1"># Not all tests will have the LISA marker, such as</span>
+                <span class="c1"># static analysis tests.</span>
+                <span class="k">continue</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">mark</span><span class="o">.</span><span class="n">kwargs</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">c</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="c1"># NOTE: `Item` does have a `module` field, though it’s untyped.</span>
+                    <span class="n">c</span><span class="p">[</span><span class="s2">&quot;module&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;module&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">item</span><span class="o">.</span><span class="n">module</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>  <span class="c1"># type: ignore</span>
+                    <span class="n">c</span><span class="p">[</span><span class="s2">&quot;area&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;area&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span> <span class="o">==</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;area&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">casefold</span><span class="p">(),</span>
+                    <span class="n">c</span><span class="p">[</span><span class="s2">&quot;category&quot;</span><span class="p">]</span>
+                    <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;category&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span> <span class="o">==</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;category&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">casefold</span><span class="p">(),</span>
+                    <span class="c1"># Priority of 0 is falsy so explicitly check against None.</span>
+                    <span class="n">c</span><span class="p">[</span><span class="s2">&quot;priority&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;priority&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;priority&quot;</span><span class="p">],</span>
+                    <span class="n">c</span><span class="p">[</span><span class="s2">&quot;tags&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">set</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;tags&quot;</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="nb">set</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;tags&quot;</span><span class="p">]),</span>
+                <span class="p">]</span>
+            <span class="p">):</span>
+                <span class="n">select</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;times&quot;</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;exclude&quot;</span><span class="p">])</span>
+    <span class="c1"># Handle edge case of no items selected for inclusion.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">included</span><span class="p">:</span>
+        <span class="n">included</span> <span class="o">=</span> <span class="n">items</span>
+    <span class="c1"># Properly report deselected items.</span>
+    <span class="n">collected</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">included</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">excluded</span><span class="p">]</span>
+    <span class="n">deselected</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">items</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">collected</span><span class="p">]</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">hook</span><span class="o">.</span><span class="n">pytest_deselected</span><span class="p">(</span><span class="n">items</span><span class="o">=</span><span class="n">deselected</span><span class="p">)</span>
+    <span class="n">items</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">collected</span></div>
+
+
+<div class="viewcode-block" id="LISAScheduling"><a class="viewcode-back" href="../modules/lisa.html#lisa.LISAScheduling">[docs]</a><span class="k">class</span> <span class="nc">LISAScheduling</span><span class="p">(</span><span class="n">LoadScopeScheduling</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Implement load scheduling across nodes, but grouping by target parameter.</span>
+
+<span class="sd">    This algorithm ensures that all tests which share the same set of</span>
+<span class="sd">    parameters (namely the target) will run on the same executor as a</span>
+<span class="sd">    single work-unit.</span>
+
+<span class="sd">    .. TODO::</span>
+
+<span class="sd">       This essentially confines the targets and one target won&#39;t be</span>
+<span class="sd">       spun up multiple times when run in parallel, so we should make</span>
+<span class="sd">       this scheduler optional, as an alternative scenario is to spin</span>
+<span class="sd">       up multiple near-identical instances of a target in order to</span>
+<span class="sd">       run tests in parallel.</span>
+
+<span class="sd">    This is modeled after the built-in ``LoadFileScheduling``, which</span>
+<span class="sd">    also simply subclasses ``LoadScopeScheduling``. See</span>
+<span class="sd">    ``_split_scope`` for the important part. Note that we can extend</span>
+<span class="sd">    this to implement any kind of scheduling algorithm we want.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="LISAScheduling.__init__"><a class="viewcode-back" href="../modules/lisa.html#lisa.LISAScheduling.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>  <span class="c1"># type: ignore</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">log</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">log</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">py</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">Producer</span><span class="p">(</span><span class="s2">&quot;lisasched&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">log</span><span class="o">.</span><span class="n">lisasched</span></div>
+
+    <span class="c1"># NOTE: Needs to handle whitespace, so can’t be `\w+`.</span>
+    <span class="n">_regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\[Target=([^\[\]]+)\]&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_split_scope</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodeid</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Determine the scope (grouping) of a `nodeid`.</span>
+
+<span class="sd">        Example of a parameterized test&#39;s `nodeid`:</span>
+
+<span class="sd">        * ``example/test_module.py::test_function[Target=A]``</span>
+<span class="sd">        * ``example/test_module.py::test_function[A][Target=B]``</span>
+<span class="sd">        * ``example/test_module.py::test_function_extra[A][B][Target=C]``</span>
+
+<span class="sd">        `LoadScopeScheduling` uses ``nodeid.rsplit(&quot;::&quot;, 1)[0]``, or</span>
+<span class="sd">        the first ``::`` from the right, to split by scope, such that</span>
+<span class="sd">        classes will be grouped, then modules. ``LoadFileScheduling``</span>
+<span class="sd">        uses ``nodeid.split(&quot;::&quot;, 1)[0]``, or the first ``::`` from</span>
+<span class="sd">        the left, to instead split only by modules (Python files).</span>
+
+<span class="sd">        We opportunistically find the &quot;Target&quot; parameter and use it as</span>
+<span class="sd">        the scope. If the target parameter is missing then we simply</span>
+<span class="sd">        fallback to the algorithm of `LoadScopeScheduling`. So the</span>
+<span class="sd">        above would map into the scopes: &#39;A&#39;, &#39;B&#39;, and &#39;C&#39;.</span>
+
+<span class="sd">        &gt;&gt;&gt; class Config:</span>
+<span class="sd">        ...     def getoption(self, option):</span>
+<span class="sd">        ...         return False</span>
+<span class="sd">        ...     def getvalue(self, value):</span>
+<span class="sd">        ...         return [&quot;popen&quot;]</span>
+<span class="sd">        &gt;&gt;&gt; s = LISAScheduling(Config())</span>
+<span class="sd">        &gt;&gt;&gt; s._split_scope(&quot;example/test_module.py::test_function[Target=A][B][C]&quot;)</span>
+<span class="sd">        &#39;A&#39;</span>
+<span class="sd">        &gt;&gt;&gt; s._split_scope(&quot;example/test_module.py::test_function[A][Target=B][C]&quot;)</span>
+<span class="sd">        &#39;B&#39;</span>
+<span class="sd">        &gt;&gt;&gt; s._split_scope(&quot;example/test_module.py::test_function[A][B][Target=C]&quot;)</span>
+<span class="sd">        &#39;C&#39;</span>
+<span class="sd">        &gt;&gt;&gt; s._split_scope(&quot;example/test_module.py::test_function&quot;)</span>
+<span class="sd">        &#39;example/test_module.py&#39;</span>
+<span class="sd">        &gt;&gt;&gt; s._split_scope(&quot;example/test_module.py::test_class::test_function&quot;)</span>
+<span class="sd">        &#39;example/test_module.py::test_class&#39;</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">search</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_regex</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">nodeid</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">search</span><span class="p">:</span>
+            <span class="n">scope</span> <span class="o">=</span> <span class="n">search</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">getoption</span><span class="p">(</span><span class="s2">&quot;verbose&quot;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Split nodeid &#39;</span><span class="si">{</span><span class="n">nodeid</span><span class="si">}</span><span class="s2">&#39; into scope &#39;</span><span class="si">{</span><span class="n">scope</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">scope</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_split_scope</span><span class="p">(</span><span class="n">nodeid</span><span class="p">)</span>  <span class="c1"># type: ignore</span></div>
+
+
+<div class="viewcode-block" id="pytest_xdist_make_scheduler"><a class="viewcode-back" href="../modules/lisa.html#lisa.pytest_xdist_make_scheduler">[docs]</a><span class="k">def</span> <span class="nf">pytest_xdist_make_scheduler</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LISAScheduling</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;pytest-xdist `make scheduler hook`_ for implementing a custom scheduler.</span>
+
+<span class="sd">    .. _make scheduler hook: https://github.com/pytest-dev/pytest-xdist/blob/master/OVERVIEW.md</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">LISAScheduling</span><span class="p">(</span><span class="n">config</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">LISA</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../USAGE.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../DESIGN.html">Design</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules/lisa.html">lisa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/target.html">target</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/playbook.html">playbook</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Microsoft Corporation.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

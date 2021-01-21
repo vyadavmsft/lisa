@@ -1,0 +1,312 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>target.plugin &#8212; LISA 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="target.target" href="target.target.html" />
+    <link rel="prev" title="target.azure" href="target.azure.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-target.plugin">
+<span id="target-plugin"></span><h1>target.plugin<a class="headerlink" href="#module-target.plugin" title="Permalink to this headline">¶</a></h1>
+<p>Provides and parameterizes the <a class="reference internal" href="#target.plugin.target" title="target.plugin.target"><code class="xref py py-func docutils literal notranslate"><span class="pre">target()</span></code></a> fixture(s).</p>
+<div class="admonition-todo admonition" id="id1">
+<p class="admonition-title">Todo</p>
+<ul class="simple">
+<li><p>Deallocate targets when switching to a new target.</p></li>
+<li><p>Use richer feature/requirements comparison for targets.</p></li>
+</ul>
+</div>
+<p class="rubric">Functions</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#target.plugin.c_target" title="target.plugin.c_target"><code class="xref py py-obj docutils literal notranslate"><span class="pre">c_target</span></code></a>(request)</p></td>
+<td><p>This fixture is the same as <a class="reference internal" href="#target.plugin.target" title="target.plugin.target"><code class="xref py py-func docutils literal notranslate"><span class="pre">target()</span></code></a> but shared across a class.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#target.plugin.cleanup_target" title="target.plugin.cleanup_target"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cleanup_target</span></code></a>(t, request)</p></td>
+<td><p>This is called by fixtures after they’re done with a <a class="reference internal" href="target.target.html#target.target.Target" title="target.target.Target"><code class="xref py py-class docutils literal notranslate"><span class="pre">Target</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#target.plugin.delete_targets" title="target.plugin.delete_targets"><code class="xref py py-obj docutils literal notranslate"><span class="pre">delete_targets</span></code></a>(config)</p></td>
+<td><p>Deletes all cached targets.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#target.plugin.get_target" title="target.plugin.get_target"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_target</span></code></a>(request)</p></td>
+<td><p>Common case of getting one <code class="docutils literal notranslate"><span class="pre">Target</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#target.plugin.get_targets" title="target.plugin.get_targets"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_targets</span></code></a>(request)</p></td>
+<td><p>This function gets or creates N <code class="docutils literal notranslate"><span class="pre">Target</span></code> instances.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#target.plugin.m_target" title="target.plugin.m_target"><code class="xref py py-obj docutils literal notranslate"><span class="pre">m_target</span></code></a>(request)</p></td>
+<td><p>This fixture is the same as <a class="reference internal" href="#target.plugin.target" title="target.plugin.target"><code class="xref py py-func docutils literal notranslate"><span class="pre">target()</span></code></a> but shared across a module.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#target.plugin.pytest_addoption" title="target.plugin.pytest_addoption"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_addoption</span></code></a>(parser)</p></td>
+<td><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_addoption">addoption hook</a> to add our CLI options.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#target.plugin.pytest_configure" title="target.plugin.pytest_configure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_configure</span></code></a>(config)</p></td>
+<td><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_configure">configure hook</a> to perform initial configuration.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#target.plugin.pytest_generate_tests" title="target.plugin.pytest_generate_tests"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_generate_tests</span></code></a>(metafunc)</p></td>
+<td><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_generate_tests">generate_tests hook</a> to indirectly parameterize <a class="reference internal" href="#target.plugin.target" title="target.plugin.target"><code class="xref py py-func docutils literal notranslate"><span class="pre">target()</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#target.plugin.pytest_playbook_schema" title="target.plugin.pytest_playbook_schema"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_playbook_schema</span></code></a>(schema)</p></td>
+<td><p><a class="reference internal" href="playbook.html#module-playbook" title="playbook"><code class="xref py py-mod docutils literal notranslate"><span class="pre">playbook</span></code></a> hook to update the playbook schema.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#target.plugin.pytest_sessionstart" title="target.plugin.pytest_sessionstart"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_sessionstart</span></code></a>(session)</p></td>
+<td><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_sessionstart">sessionstart hook</a> to setup the session.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#target.plugin.pytest_unconfigure" title="target.plugin.pytest_unconfigure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_unconfigure</span></code></a>(config)</p></td>
+<td><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_unconfigure">unconfigure hook</a> to perform teardown.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#target.plugin.target" title="target.plugin.target"><code class="xref py py-obj docutils literal notranslate"><span class="pre">target</span></code></a>(request)</p></td>
+<td><p>This fixture provides a connected <a class="reference internal" href="target.target.html#target.target.Target" title="target.target.Target"><code class="xref py py-class docutils literal notranslate"><span class="pre">Target</span></code></a> for each test.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#target.plugin.target_pool" title="target.plugin.target_pool"><code class="xref py py-obj docutils literal notranslate"><span class="pre">target_pool</span></code></a>(config)</p></td>
+<td><p>Exclusive access to the cached targets pool.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#target.plugin.targets" title="target.plugin.targets"><code class="xref py py-obj docutils literal notranslate"><span class="pre">targets</span></code></a>(request)</p></td>
+<td><p>This fixture is the same as <a class="reference internal" href="#target.plugin.target" title="target.plugin.target"><code class="xref py py-func docutils literal notranslate"><span class="pre">target()</span></code></a> but gets a <code class="docutils literal notranslate"><span class="pre">Target</span></code> list.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py function">
+<dt id="target.plugin.pytest_addoption">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">pytest_addoption</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parser</span><span class="p">:</span> <span class="n">Parser</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#pytest_addoption"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.pytest_addoption" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_addoption">addoption hook</a> to add our CLI options.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.pytest_playbook_schema">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">pytest_playbook_schema</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">schema</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#pytest_playbook_schema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.pytest_playbook_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p><a class="reference internal" href="playbook.html#module-playbook" title="playbook"><code class="xref py py-mod docutils literal notranslate"><span class="pre">playbook</span></code></a> hook to update the playbook schema.</p>
+<p>This adds <code class="docutils literal notranslate"><span class="pre">platforms</span></code> and <code class="docutils literal notranslate"><span class="pre">targets</span></code> keys to the playbook
+schema, with their nested schemata accumulated from each
+platform’s implementations of
+<a class="reference internal" href="target.target.html#target.target.Target.defaults" title="target.target.Target.defaults"><code class="xref py py-meth docutils literal notranslate"><span class="pre">defaults()</span></code></a> and
+<a class="reference internal" href="target.target.html#target.target.Target.schema" title="target.target.Target.schema"><code class="xref py py-meth docutils literal notranslate"><span class="pre">schema()</span></code></a>. We do this by iterating
+over the subclasses of <a class="reference internal" href="target.target.html#target.target.Target" title="target.target.Target"><code class="xref py py-class docutils literal notranslate"><span class="pre">Target</span></code></a>, a handy
+feature of Python that lets us automatically discover users’
+implementations, even if they’re defined in a local
+<code class="docutils literal notranslate"><span class="pre">conftest.py</span></code> Pytest configuration file.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.target_pool">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">target_pool</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span><span class="p">:</span> <span class="n">Config</span></em><span class="sig-paren">)</span> &#x2192; Generator<span class="p">[</span>Dict<span class="p">[</span>str<span class="p">, </span>Any<span class="p">]</span><span class="p">, </span>None<span class="p">, </span>None<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#target_pool"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.target_pool" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exclusive access to the cached targets pool.</p>
+<p>This handles access to the Pytest cache of serialized targets. The
+cache is a dict of <code class="docutils literal notranslate"><span class="pre">{target.name:</span> <span class="pre">target.to_json()}</span></code>. We use a
+file lock to provide exclusive access even if Pytest is being run
+in parallel with <a class="reference external" href="https://github.com/pytest-dev/pytest-xdist">pytest-xdist</a>. Entries have a <code class="docutils literal notranslate"><span class="pre">locked</span></code>
+property and must only be modified during a session when locked by
+that session. Locking means setting <code class="docutils literal notranslate"><span class="pre">locked</span></code> to <code class="docutils literal notranslate"><span class="pre">True</span></code> and
+updating the entry before exiting this context manager.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.delete_targets">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">delete_targets</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span><span class="p">:</span> <span class="n">Config</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#delete_targets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.delete_targets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deletes all cached targets.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.pytest_configure">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">pytest_configure</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span><span class="p">:</span> <span class="n">Config</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#pytest_configure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.pytest_configure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_configure">configure hook</a> to perform initial configuration.</p>
+<p>We’re registering our custom marker so that it passes
+<code class="docutils literal notranslate"><span class="pre">--strict-markers</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.pytest_unconfigure">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">pytest_unconfigure</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span><span class="p">:</span> <span class="n">Config</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#pytest_unconfigure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.pytest_unconfigure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_unconfigure">unconfigure hook</a> to perform teardown.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.get_target">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">get_target</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span></em><span class="sig-paren">)</span> &#x2192; Target<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#get_target"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.get_target" title="Permalink to this definition">¶</a></dt>
+<dd><p>Common case of getting one <code class="docutils literal notranslate"><span class="pre">Target</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.get_targets">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">get_targets</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span></em><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span>Target<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#get_targets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.get_targets" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function gets or creates N <code class="docutils literal notranslate"><span class="pre">Target</span></code> instances.</p>
+<ol class="arabic simple">
+<li><p>Unpack request into params, required features, and count</p></li>
+<li><p>Setup fitness criteria for target(s)</p></li>
+<li><p>Find or create necessary targets</p></li>
+<li><p>Return targets</p></li>
+</ol>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.cleanup_target">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">cleanup_target</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">t</span><span class="p">:</span> <span class="n">Target</span></em>, <em class="sig-param"><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#cleanup_target"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.cleanup_target" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is called by fixtures after they’re done with a <a class="reference internal" href="target.target.html#target.target.Target" title="target.target.Target"><code class="xref py py-class docutils literal notranslate"><span class="pre">Target</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.target">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">target</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span></em><span class="sig-paren">)</span> &#x2192; Iterator<span class="p">[</span>Target<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#target"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.target" title="Permalink to this definition">¶</a></dt>
+<dd><p>This fixture provides a connected <a class="reference internal" href="target.target.html#target.target.Target" title="target.target.Target"><code class="xref py py-class docutils literal notranslate"><span class="pre">Target</span></code></a> for each test.</p>
+<p>It is parametrized indirectly in <a class="reference internal" href="#target.plugin.pytest_generate_tests" title="target.plugin.pytest_generate_tests"><code class="xref py py-func docutils literal notranslate"><span class="pre">pytest_generate_tests()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.targets">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">targets</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span></em><span class="sig-paren">)</span> &#x2192; Iterator<span class="p">[</span>List<span class="p">[</span>Target<span class="p">]</span><span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#targets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.targets" title="Permalink to this definition">¶</a></dt>
+<dd><p>This fixture is the same as <a class="reference internal" href="#target.plugin.target" title="target.plugin.target"><code class="xref py py-func docutils literal notranslate"><span class="pre">target()</span></code></a> but gets a <code class="docutils literal notranslate"><span class="pre">Target</span></code> list.</p>
+<p>For example, use <code class="docutils literal notranslate"><span class="pre">pytest.mark.target(count=2)</span></code> to get a list of
+two targets with the same parameters, in the same group.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.c_target">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">c_target</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span></em><span class="sig-paren">)</span> &#x2192; Iterator<span class="p">[</span>Target<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#c_target"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.c_target" title="Permalink to this definition">¶</a></dt>
+<dd><p>This fixture is the same as <a class="reference internal" href="#target.plugin.target" title="target.plugin.target"><code class="xref py py-func docutils literal notranslate"><span class="pre">target()</span></code></a> but shared across a class.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.m_target">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">m_target</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span></em><span class="sig-paren">)</span> &#x2192; Iterator<span class="p">[</span>Target<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#m_target"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.m_target" title="Permalink to this definition">¶</a></dt>
+<dd><p>This fixture is the same as <a class="reference internal" href="#target.plugin.target" title="target.plugin.target"><code class="xref py py-func docutils literal notranslate"><span class="pre">target()</span></code></a> but shared across a module.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.pytest_sessionstart">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">pytest_sessionstart</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">session</span><span class="p">:</span> <span class="n">Session</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#pytest_sessionstart"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.pytest_sessionstart" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_sessionstart">sessionstart hook</a> to setup the session.</p>
+<p>Gather the targets from the playbook.</p>
+<p>First collect any user supplied defaults from the <code class="docutils literal notranslate"><span class="pre">platforms</span></code>
+key in the playbook, which will default to the given <code class="docutils literal notranslate"><span class="pre">defaults</span></code>
+implemented for each platform. Copy the defaults and then
+overwrite with the target’s specific parameters.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="target.plugin.pytest_generate_tests">
+<code class="sig-prename descclassname">target.plugin.</code><code class="sig-name descname">pytest_generate_tests</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">metafunc</span><span class="p">:</span> <span class="n">Metafunc</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/plugin.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/plugin.html#pytest_generate_tests"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.plugin.pytest_generate_tests" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_generate_tests">generate_tests hook</a> to indirectly parameterize <a class="reference internal" href="#target.plugin.target" title="target.plugin.target"><code class="xref py py-func docutils literal notranslate"><span class="pre">target()</span></code></a>.</p>
+<p>This takes the given targets (probably from the playbook) and
+transforms them into parameters for all the tests using the
+<a class="reference internal" href="#target.plugin.target" title="target.plugin.target"><code class="xref py py-func docutils literal notranslate"><span class="pre">target()</span></code></a> fixture. Since this hook is run for each test,
+so we gather the targets in <a class="reference internal" href="#target.plugin.pytest_sessionstart" title="target.plugin.pytest_sessionstart"><code class="xref py py-func docutils literal notranslate"><span class="pre">pytest_sessionstart()</span></code></a>.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">LISA</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../USAGE.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../DESIGN.html">Design</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lisa.html">lisa</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="target.html">target</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="target.azure.html">target.azure</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">target.plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="target.target.html">target.target</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="playbook.html">playbook</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="target.html">target</a><ul>
+      <li>Previous: <a href="target.azure.html" title="previous chapter">target.azure</a></li>
+      <li>Next: <a href="target.target.html" title="next chapter">target.target</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Microsoft Corporation.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/modules/target.plugin.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,230 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>playbook &#8212; LISA 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="target.target" href="target.target.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-playbook">
+<span id="playbook"></span><h1>playbook<a class="headerlink" href="#module-playbook" title="Permalink to this headline">¶</a></h1>
+<p>A plugin for creating, validating, and reading a playbook.</p>
+<p>Use the <a class="reference internal" href="#playbook.Hooks.pytest_playbook_schema" title="playbook.Hooks.pytest_playbook_schema"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pytest_playbook_schema()</span></code></a> hook to modify the
+<a class="reference external" href="https://github.com/keleshev/schema">schema</a> dictionary representing the data expected to be read and
+validated from a <code class="docutils literal notranslate"><span class="pre">playbook.yaml</span></code> <a class="reference external" href="https://pyyaml.org/wiki/PyYAMLDocumentation">YAML</a> file, the path to which is
+provided by the user with the command-line flag
+<code class="docutils literal notranslate"><span class="pre">--playbook=&lt;data.yaml&gt;</span></code>.</p>
+<p>This module’s <a class="reference internal" href="#playbook.data" title="playbook.data"><code class="xref py py-data docutils literal notranslate"><span class="pre">data</span></code></a> attribute will hold the read and
+validated data after all <a class="reference internal" href="#playbook.pytest_configure" title="playbook.pytest_configure"><code class="xref py py-func docutils literal notranslate"><span class="pre">pytest_configure()</span></code></a> hooks have run.
+Use it in your <code class="docutils literal notranslate"><span class="pre">conftest.py</span></code> (or Pytest plugin) like so:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">playbook</span>
+<span class="kn">from</span> <span class="nn">schema</span> <span class="kn">import</span> <span class="n">Schema</span>
+
+<span class="k">def</span> <span class="nf">pytest_playbook_schema</span><span class="p">(</span><span class="n">schema</span><span class="p">):</span>
+    <span class="n">schema</span><span class="p">[</span><span class="s2">&quot;targets&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Schema</span><span class="p">({</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;platform&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;cpus&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">})</span>
+
+<span class="k">def</span> <span class="nf">pytest_sessionstart</span><span class="p">(</span><span class="n">session</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">playbook</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;targets&quot;</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">target</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>Remember not to use <code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">playbook</span> <span class="pre">import</span> <span class="pre">data</span></code> because then the
+attribute will not contain the shared data. Instead use <code class="docutils literal notranslate"><span class="pre">import</span>
+<span class="pre">playbook</span></code> and reference <a class="reference internal" href="#playbook.data" title="playbook.data"><code class="xref py py-data docutils literal notranslate"><span class="pre">playbook.data</span></code></a>.</p>
+<p>All registered schema can be printed to a <a class="reference external" href="https://json-schema.org/">JSON Schema</a> file with
+<code class="docutils literal notranslate"><span class="pre">--print-schema=&lt;file.json&gt;</span></code>.</p>
+<p class="rubric">Module Attributes</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#playbook.data" title="playbook.data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data</span></code></a></p></td>
+<td><p>This global is the data read from the given playbook.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Functions</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#playbook.pytest_addhooks" title="playbook.pytest_addhooks"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_addhooks</span></code></a>(pluginmanager)</p></td>
+<td><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_addhooks">addhooks hook</a> to register our hooks.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#playbook.pytest_addoption" title="playbook.pytest_addoption"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_addoption</span></code></a>(parser, pluginmanager)</p></td>
+<td><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_addoption">addoption hook</a> to add our CLI options.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#playbook.pytest_configure" title="playbook.pytest_configure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_configure</span></code></a>(config)</p></td>
+<td><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_configure">configure hook</a> to configure our plugin.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Classes</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#playbook.Hooks" title="playbook.Hooks"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Hooks</span></code></a>()</p></td>
+<td><p>Provides the hook specifications.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py data">
+<dt id="playbook.data">
+<code class="sig-prename descclassname">playbook.</code><code class="sig-name descname">data</code><em class="property">: Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></em><em class="property"> = {}</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-playbook/playbook.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#playbook.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>This global is the data read from the given playbook.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="playbook.Hooks">
+<em class="property">class </em><code class="sig-prename descclassname">playbook.</code><code class="sig-name descname">Hooks</code><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-playbook/playbook.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/playbook.html#Hooks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#playbook.Hooks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Provides the hook specifications.</p>
+<dl class="py method">
+<dt id="playbook.Hooks.pytest_playbook_schema">
+<code class="sig-name descname">pytest_playbook_schema</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">schema</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">config</span><span class="p">:</span> <span class="n">Config</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-playbook/playbook.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/playbook.html#Hooks.pytest_playbook_schema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#playbook.Hooks.pytest_playbook_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the Playbook’s schema dict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>schema</strong> – mutable dict passed to <code class="docutils literal notranslate"><span class="pre">schema.validate()</span></code> in <a class="reference internal" href="#playbook.pytest_configure" title="playbook.pytest_configure"><code class="xref py py-func docutils literal notranslate"><span class="pre">pytest_configure()</span></code></a>.</p></li>
+<li><p><strong>config</strong> – optional, allows access to Pytest <code class="docutils literal notranslate"><span class="pre">Config</span></code> object if given.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="playbook.pytest_addhooks">
+<code class="sig-prename descclassname">playbook.</code><code class="sig-name descname">pytest_addhooks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">pluginmanager</span><span class="p">:</span> <span class="n">PytestPluginManager</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-playbook/playbook.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/playbook.html#pytest_addhooks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#playbook.pytest_addhooks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_addhooks">addhooks hook</a> to register our hooks.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="playbook.pytest_addoption">
+<code class="sig-prename descclassname">playbook.</code><code class="sig-name descname">pytest_addoption</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parser</span><span class="p">:</span> <span class="n">Parser</span></em>, <em class="sig-param"><span class="n">pluginmanager</span><span class="p">:</span> <span class="n">PytestPluginManager</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-playbook/playbook.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/playbook.html#pytest_addoption"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#playbook.pytest_addoption" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_addoption">addoption hook</a> to add our CLI options.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="playbook.pytest_configure">
+<code class="sig-prename descclassname">playbook.</code><code class="sig-name descname">pytest_configure</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span><span class="p">:</span> <span class="n">Config</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-playbook/playbook.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/playbook.html#pytest_configure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#playbook.pytest_configure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_configure">configure hook</a> to configure our plugin.</p>
+<p>This is set to be tried last so that all other plugins and
+<code class="docutils literal notranslate"><span class="pre">conftest.py</span></code> files have been loaded and defined their
+<a class="reference internal" href="#playbook.Hooks.pytest_playbook_schema" title="playbook.Hooks.pytest_playbook_schema"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pytest_playbook_schema()</span></code></a> hooks.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">LISA</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../USAGE.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../DESIGN.html">Design</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lisa.html">lisa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="target.html">target</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">playbook</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="target.target.html" title="previous chapter">target.target</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Microsoft Corporation.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/modules/playbook.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

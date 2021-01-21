@@ -1,0 +1,543 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How to Use Pytest and LISA &#8212; LISA 0.1.0 documentation</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Technical Specification Document" href="DESIGN.html" />
+    <link rel="prev" title="Linux Integration Services Automation" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="how-to-use-pytest-and-lisa">
+<h1>How to Use Pytest and LISA<a class="headerlink" href="#how-to-use-pytest-and-lisa" title="Permalink to this headline">¶</a></h1>
+<p>LISA is supported on almost any Linux or Windows installation provided
+Python 3.7 (released in 2018) or newer is available and SSH can be
+used to connect to the remote targets under test. The local SSH
+configuration is respected so <code class="docutils literal notranslate"><span class="pre">ProxyJump</span></code> can be used.</p>
+<div class="section" id="install-python-3-7">
+<h2>Install Python 3.7+<a class="headerlink" href="#install-python-3-7" title="Permalink to this headline">¶</a></h2>
+<p>Install Python 3.7 or newer from your Linux distribution’s package
+repositories, or <a class="reference external" href="https://www.python.org/">python.org</a>.</p>
+<p>On Ubuntu 20.04 and up, just run <code class="docutils literal notranslate"><span class="pre">apt</span> <span class="pre">install</span> <span class="pre">python-is-python3</span></code>.</p>
+<p>Below that Ubuntu version, the <code class="docutils literal notranslate"><span class="pre">python3</span></code> package is out-of-date, so
+use something like a <a class="reference external" href="https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa">PPA</a> or <a class="reference external" href="https://github.com/pyenv/pyenv">pyenv</a>.</p>
+</div>
+<div class="section" id="install-poetry">
+<h2>Install Poetry<a class="headerlink" href="#install-poetry" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://python-poetry.org/docs/">Poetry</a> is our preferred tool for
+Python dependency management and packaging. We’ll use it to
+automatically setup a virtual environment and install everything.</p>
+<div class="section" id="on-linux-or-wsl">
+<h3>On Linux (or WSL)<a class="headerlink" href="#on-linux-or-wsl" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py <span class="p">|</span> python -
+<span class="nb">source</span> <span class="nv">$HOME</span>/.poetry/env
+</pre></div>
+</div>
+<p>If you are using WSL, installing Poetry on both Windows and Linux may
+cause both platforms’ versions of Poetry to be on your path, as Windows
+binaries are mapped into WSL’s <code class="docutils literal notranslate"><span class="pre">PATH</span></code>. This means that the Linux
+<code class="docutils literal notranslate"><span class="pre">poetry</span></code> binary <em>must</em> appear in your <code class="docutils literal notranslate"><span class="pre">PATH</span></code> before the Windows
+version, or this error will appear:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>`/usr/bin/env: ‘python\r’: No such file or directory`
+</pre></div>
+</div>
+<p>Adjust your <code class="docutils literal notranslate"><span class="pre">PATH</span></code> appropriately to fix it.</p>
+</div>
+<div class="section" id="on-windows-in-powershell">
+<h3>On Windows (in PowerShell)<a class="headerlink" href="#on-windows-in-powershell" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-powershell notranslate"><div class="highlight"><pre><span></span>(Invoke-WebRequest -Uri https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py -UseBasicParsing).Content | python -
+$env:PATH += &quot;;$env:USERPROFILE\.poetry\bin&quot;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="clone-lisa-and-cd-into-the-git-repo">
+<h2>Clone LISA and <code class="docutils literal notranslate"><span class="pre">cd</span></code> into the Git repo<a class="headerlink" href="#clone-lisa-and-cd-into-the-git-repo" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone -b andschwa/pytest https://github.com/microsoft/lisa.git
+<span class="nb">cd</span> lisa
+</pre></div>
+</div>
+</div>
+<div class="section" id="install-python-dependencies">
+<h2>Install Python dependencies<a class="headerlink" href="#install-python-dependencies" title="Permalink to this headline">¶</a></h2>
+<p>Now we’ll use <code class="docutils literal notranslate"><span class="pre">poetry</span></code> to install all the necessary packages. Note
+that we have a number of developer dependencies specified to make your
+life easier when <a class="reference internal" href="CONTRIBUTING.html"><span class="doc">contributing</span></a>, but you can
+exclude these (and their potential additional requirements) with the
+flag <code class="docutils literal notranslate"><span class="pre">--no-dev</span></code>. Once installed, we use <code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">shell</span></code> to enter a
+sub-shell with the Python virtual environment setup.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Install the Python packages</span>
+poetry install
+
+<span class="c1"># Enter the virtual environment</span>
+poetry shell
+</pre></div>
+</div>
+</div>
+<div class="section" id="use-lisa">
+<h2>Use LISA<a class="headerlink" href="#use-lisa" title="Permalink to this headline">¶</a></h2>
+<p>Under the covers <code class="docutils literal notranslate"><span class="pre">lisa</span></code> is just <code class="docutils literal notranslate"><span class="pre">pytest</span></code>! Run <code class="docutils literal notranslate"><span class="pre">lisa</span> <span class="pre">--help</span></code> for
+all available options, and refer to the Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/usage.html">usage</a> documentation.
+LISA is generally run with a <a class="reference internal" href="modules/playbook.html#module-playbook" title="playbook"><code class="xref py py-mod docutils literal notranslate"><span class="pre">playbook</span></code></a> which is a <a class="reference external" href="https://learnxinyminutes.com/docs/yaml/">YAML file</a> specifying a list of
+remote targets, their parameters, and optionally a set of test
+selection criteria. The <code class="docutils literal notranslate"><span class="pre">demo.yaml</span></code> looks like:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">platforms</span><span class="p">:</span>
+  <span class="nt">AzureCLI</span><span class="p">:</span>
+    <span class="nt">sku</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Standard_DS2_v2</span>
+
+<span class="nt">targets</span><span class="p">:</span>
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Debian</span>
+    <span class="nt">platform</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">AzureCLI</span>
+    <span class="nt">image</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">credativ:Debian:9:9.0.201706190</span>
+
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Ubuntu</span>
+    <span class="nt">platform</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">AzureCLI</span>
+    <span class="nt">image</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Canonical:UbuntuServer:18.04-LTS:latest</span>
+
+<span class="nt">criteria</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="nt">module</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">test_smoke_b</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">platforms</span></code> key is used to set default parameters for
+targets using that platform; in this case, the SKU is set to
+<code class="docutils literal notranslate"><span class="pre">Standard_DS2_v2</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">targets</span></code> key defines a number of targets on which the selected
+tests will run. Here we’re asking for two targets using the same
+<a class="reference internal" href="modules/target.azure.html#target.azure.AzureCLI" title="target.azure.AzureCLI"><code class="xref py py-class docutils literal notranslate"><span class="pre">AzureCLI</span></code></a> platform, both will use the same
+default for the SKU, but different images. The <code class="docutils literal notranslate"><span class="pre">name</span></code> is just a
+user-provided friendly name that is appended to the parameterized
+tests and will show up in test results.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">criteria</span></code> key can be used to select a tests instead of using
+Pytest’s CLI test selection interface. In this case we’re selecting
+all tests from the module (Python file) named <code class="docutils literal notranslate"><span class="pre">test_smoke_b</span></code>, one of
+the examples of an Azure VM smoke test, and it looks like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>  <span class="c1"># For type checking.</span>
+
+<span class="kn">import</span> <span class="nn">typing</span>
+
+<span class="k">if</span> <span class="n">typing</span><span class="o">.</span><span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">target</span> <span class="kn">import</span> <span class="n">AzureCLI</span>
+    <span class="kn">from</span> <span class="nn">_pytest.logging</span> <span class="kn">import</span> <span class="n">LogCaptureFixture</span>
+    <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">from</span> <span class="nn">invoke.runners</span> <span class="kn">import</span> <span class="n">CommandTimedOut</span><span class="p">,</span> <span class="n">UnexpectedExit</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">paramiko</span> <span class="kn">import</span> <span class="n">SSHException</span>  <span class="c1"># type: ignore</span>
+
+<span class="kn">from</span> <span class="nn">lisa</span> <span class="kn">import</span> <span class="n">LISA</span>
+
+
+<span class="nd">@LISA</span><span class="p">(</span><span class="n">platform</span><span class="o">=</span><span class="s2">&quot;Azure&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="s2">&quot;Functional&quot;</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="s2">&quot;deploy&quot;</span><span class="p">,</span> <span class="n">priority</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">test_smoke</span><span class="p">(</span><span class="n">target</span><span class="p">:</span> <span class="n">AzureCLI</span><span class="p">,</span> <span class="n">caplog</span><span class="p">:</span> <span class="n">LogCaptureFixture</span><span class="p">,</span> <span class="n">tmp_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Check that an Azure Linux VM can be deployed and is responsive.</span>
+
+<span class="sd">    This example uses exactly one function for the entire test, which</span>
+<span class="sd">    means we have to catch failures that don&#39;t fail the test, and</span>
+<span class="sd">    instead emit warnings. It works, and it&#39;s closer to how LISAv2</span>
+<span class="sd">    would have implemented it, but it&#39;s less Pythonic. For a more</span>
+<span class="sd">    &quot;modern&quot; example, see `test_smoke_a.py`.</span>
+
+<span class="sd">    1. Deploy the VM (via `target` fixture).</span>
+<span class="sd">    2. Ping the VM.</span>
+<span class="sd">    3. Connect to the VM via SSH.</span>
+<span class="sd">    4. Attempt to reboot via SSH, otherwise use the platform.</span>
+<span class="sd">    5. Fetch the serial console logs AKA boot diagnostics.</span>
+
+<span class="sd">    SSH failures DO NOT fail this test.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Capture INFO and above logs for this test.</span>
+    <span class="n">caplog</span><span class="o">.</span><span class="n">set_level</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Pinging before reboot...&quot;</span><span class="p">)</span>
+    <span class="n">ping1</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">ping</span><span class="p">()</span>
+
+    <span class="n">ssh_errors</span> <span class="o">=</span> <span class="p">(</span><span class="ne">TimeoutError</span><span class="p">,</span> <span class="n">CommandTimedOut</span><span class="p">,</span> <span class="n">SSHException</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;SSHing before reboot...&quot;</span><span class="p">)</span>
+        <span class="n">target</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">ssh_errors</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SSH before reboot failed: &#39;</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+    <span class="n">reboot_exit</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Rebooting...&quot;</span><span class="p">)</span>
+        <span class="c1"># If this succeeds, we should expect the exit code to be -1</span>
+        <span class="n">reboot_exit</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">sudo</span><span class="p">(</span><span class="s2">&quot;reboot&quot;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">exited</span>
+    <span class="k">except</span> <span class="n">ssh_errors</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SSH failed, using platform to reboot: &#39;</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        <span class="n">target</span><span class="o">.</span><span class="n">platform_restart</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">UnexpectedExit</span><span class="p">:</span>
+        <span class="c1"># TODO: How do we differentiate reboot working and the SSH</span>
+        <span class="c1"># connection disconnecting for other reasons?</span>
+        <span class="k">if</span> <span class="n">reboot_exit</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;While SSH worked, &#39;reboot&#39; command failed&quot;</span><span class="p">)</span>
+
+    <span class="c1"># TODO: We should check something more concrete here instead of</span>
+    <span class="c1"># sleeping an arbitrary amount of time.</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Sleeping for 10 seconds after reboot...&quot;</span><span class="p">)</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Pinging after reboot...&quot;</span><span class="p">)</span>
+    <span class="n">ping2</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">ping</span><span class="p">()</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;SSHing after reboot...&quot;</span><span class="p">)</span>
+        <span class="n">target</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">ssh_errors</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SSH after reboot failed: &#39;</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Retrieving boot diagnostics...&quot;</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">tmp_path</span> <span class="o">/</span> <span class="s2">&quot;diagnostics.txt&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># NOTE: It’s actually more interesting to emit the downloaded</span>
+        <span class="c1"># boot diagnostics to `stdout` as they’re then captured in the</span>
+        <span class="c1"># HTML report, but this is to demo using `tmp_path`.</span>
+        <span class="n">diagnostics</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">get_boot_diagnostics</span><span class="p">(</span><span class="n">hide</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">UnexpectedExit</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Retrieving boot diagnostics failed.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;See &#39;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&#39; for boot diagnostics.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># NOTE: The test criteria is to fail only if ping fails.</span>
+    <span class="k">assert</span> <span class="n">ping1</span><span class="o">.</span><span class="n">ok</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Pinging </span><span class="si">{</span><span class="n">target</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2"> before reboot failed&quot;</span>
+    <span class="k">assert</span> <span class="n">ping2</span><span class="o">.</span><span class="n">ok</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Pinging </span><span class="si">{</span><span class="n">target</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2"> after reboot failed&quot;</span>
+</pre></div>
+</div>
+<div class="section" id="enable-azure">
+<h3>Enable Azure<a class="headerlink" href="#enable-azure" title="Permalink to this headline">¶</a></h3>
+<p>Before running this demo, we will need to set up the <a class="reference external" href="https://aka.ms/azureclidocs">Azure CLI</a> because this platform uses it. Install
+it if you do not already have, then ensure it is logged in with your
+choice of authentication, and set a default subscription, which will
+be used to deploy the resources.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Install Azure CLI, make sure `az` is in your `PATH`</span>
+curl -sL https://aka.ms/InstallAzureCLIDeb <span class="p">|</span> sudo bash
+
+<span class="c1"># Login and set subscription</span>
+az login
+az account <span class="nb">set</span> -s &lt;your subscription ID&gt;
+</pre></div>
+</div>
+</div>
+<div class="section" id="run-the-demo">
+<h3>Run the Demo<a class="headerlink" href="#run-the-demo" title="Permalink to this headline">¶</a></h3>
+<p>Now we can run the demo!</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run a demo which deploys Azure resources</span>
+lisa --playbook<span class="o">=</span>playbooks/demo.yaml --keep-targets --html<span class="o">=</span>demo.html
+</pre></div>
+</div>
+<p>This will sequentially deploy the two requested targets and run the
+smoke test against them, printing the stdout, stderr, and logging of
+all tests after they complete (see below for how to change this
+behavior). The <code class="docutils literal notranslate"><span class="pre">--keep-targets</span></code> flag comes from the <a class="reference internal" href="modules/target.html#module-target" title="target"><code class="xref py py-mod docutils literal notranslate"><span class="pre">target</span></code></a>
+plugin and instructs it to cache the deployed targets between test
+runs. Delete them by running <code class="docutils literal notranslate"><span class="pre">lisa</span> <span class="pre">--delete-targets</span></code>. The
+<code class="docutils literal notranslate"><span class="pre">--html=demo.html</span></code> flag will cause an easy-to-read HTML report to be
+written to <code class="docutils literal notranslate"><span class="pre">demo.html</span></code>.</p>
+<p>It should look very similar to this slightly redacted example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ lisa --playbook=playbooks/demo.yaml --keep-targets --html=demo.html
+=========================== test session starts ==========================
+collected 40 items / 38 deselected / 2 selected
+
+testsuites/test_smoke_b.py F.                                       [100%]
+
+================================ FAILURES ================================
+_______________________ test_smoke[Target=Debian] ________________________
+testsuites/test_smoke_b.py:93: in test_smoke
+    assert ping2.ok, f&quot;Pinging {target.host} after reboot failed&quot;
+E   AssertionError: Pinging 40.123.27.161 after reboot failed
+E   assert False
+E    +  where False = &lt;Result cmd=&#39;ping -c 1 40.123.27.161&#39; exited=1&gt;.ok
+------------------------- Captured stdout setup --------------------------
+az vm create -g pytest-d6056453-a28c-4fec-8225-7c7aab02c84a-rg -n pytest-d6056453-a28c-4fec-8225-7c7aab02c84a-0 --image credativ:Debian:9:9.0.201706190 --size Standard_DS2_v2 --boot-diagnostics-storage pytestbootdiag --generate-ssh-keys
+{
+  &quot;fqdns&quot;: &quot;&quot;,
+  &quot;id&quot;: &quot;/subscriptions/&lt;...&gt;/resourceGroups/pytest-d6056453-a28c-4fec-8225-7c7aab02c84a-rg/providers/Microsoft.Compute/virtualMachines/pytest-d6056453-a28c-4fec-8225-7c7aab02c84a-0&quot;,
+  &quot;location&quot;: &quot;eastus2&quot;,
+  &quot;macAddress&quot;: &quot;00-0D-3A-DE-07-17&quot;,
+  &quot;powerState&quot;: &quot;VM running&quot;,
+  &quot;privateIpAddress&quot;: &quot;10.0.0.4&quot;,
+  &quot;publicIpAddress&quot;: &quot;&lt;...&gt;&quot;,
+  &quot;resourceGroup&quot;: &quot;pytest-d6056453-a28c-4fec-8225-7c7aab02c84a-rg&quot;,
+  &quot;zones&quot;: &quot;&quot;
+}
+-------------------------- Captured stdout call --------------------------
+ping -c 1 40.123.27.161
+PING 40.123.27.161 (40.123.27.161) 56(84) bytes of data.
+
+--- 40.123.27.161 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+...
+ping -c 1 40.123.27.161
+PING 40.123.27.161 (40.123.27.161) 56(84) bytes of data.
+64 bytes from 40.123.27.161: icmp_seq=1 ttl=43 time=85.6 ms
+
+--- 40.123.27.161 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 85.562/85.562/85.562/0.000 ms
+ping -c 1 40.123.27.161
+PING 40.123.27.161 (40.123.27.161) 56(84) bytes of data.
+
+--- 40.123.27.161 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+...
+ping -c 1 40.123.27.161
+PING 40.123.27.161 (40.123.27.161) 56(84) bytes of data.
+
+--- 40.123.27.161 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+--------------------------- Captured log call ----------------------------
+2021-01-20 17:14:56 INFO Pinging before reboot...
+2021-01-20 17:15:51 INFO SSHing before reboot...
+2021-01-20 17:15:52 INFO Connected (version 2.0, client OpenSSH_7.4p1)
+2021-01-20 17:15:53 INFO Authentication (publickey) successful!
+2021-01-20 17:15:53 INFO Rebooting...
+2021-01-20 17:15:53 WARNING While SSH worked, &#39;reboot&#39; command failed
+2021-01-20 17:15:53 INFO Sleeping for 10 seconds after reboot...
+2021-01-20 17:16:03 INFO Pinging after reboot...
+2021-01-20 17:17:08 INFO SSHing after reboot...
+2021-01-20 17:19:16 ERROR Secsh channel 1 open FAILED: Connection timed out: Connect failed
+2021-01-20 17:19:16 WARNING SSH after reboot failed: &#39;ChannelException(2, &#39;Connect failed&#39;)&#39;
+2021-01-20 17:19:16 INFO Retrieving boot diagnostics...
+2021-01-20 17:19:20 INFO See &#39;/tmp/pytest-of-andschwa/pytest-181/test_smoke_Target_Debian_0/diagnostics.txt&#39; for boot diagnostics.
+================================= PASSES =================================
+_______________________ test_smoke[Target=Ubuntu] ________________________
+------------------------- Captured stdout setup --------------------------
+az vm create -g pytest-8f173841-d702-432e-bd32-f09a984bd3ab-rg -n pytest-8f173841-d702-432e-bd32-f09a984bd3ab-0 --image Canonical:UbuntuServer:18.04-LTS:latest --size Standard_DS2_v2 --boot-diagnostics-storage pytestbootdiag --generate-ssh-keys
+{
+  &quot;fqdns&quot;: &quot;&quot;,
+  &quot;id&quot;: &quot;/subscriptions/&lt;..&gt;/resourceGroups/pytest-8f173841-d702-432e-bd32-f09a984bd3ab-rg/providers/Microsoft.Compute/virtualMachines/pytest-8f173841-d702-432e-bd32-f09a984bd3ab-0&quot;,
+  &quot;location&quot;: &quot;eastus2&quot;,
+  &quot;macAddress&quot;: &quot;00-0D-3A-7C-85-59&quot;,
+  &quot;powerState&quot;: &quot;VM running&quot;,
+  &quot;privateIpAddress&quot;: &quot;10.0.0.4&quot;,
+  &quot;publicIpAddress&quot;: &quot;&lt;...&gt;&quot;,
+  &quot;resourceGroup&quot;: &quot;pytest-8f173841-d702-432e-bd32-f09a984bd3ab-rg&quot;,
+  &quot;zones&quot;: &quot;&quot;
+}
+-------------------------- Captured stdout call --------------------------
+ping -c 1 137.116.51.62
+PING 137.116.51.62 (137.116.51.62) 56(84) bytes of data.
+
+--- 137.116.51.62 ping statistics ---
+1 packets transmitted, 0 received, 100% packet loss, time 0ms
+...
+ping -c 1 137.116.51.62
+PING 137.116.51.62 (137.116.51.62) 56(84) bytes of data.
+64 bytes from 137.116.51.62: icmp_seq=1 ttl=42 time=84.0 ms
+
+--- 137.116.51.62 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 84.004/84.004/84.004/0.000 ms
+--------------------------- Captured log call ----------------------------
+2021-01-20 17:20:26 INFO Pinging before reboot...
+2021-01-20 17:21:21 INFO SSHing before reboot...
+2021-01-20 17:21:21 INFO Connected (version 2.0, client OpenSSH_7.6p1)
+2021-01-20 17:21:22 INFO Authentication (publickey) successful!
+2021-01-20 17:21:22 INFO Rebooting...
+2021-01-20 17:21:24 WARNING While SSH worked, &#39;reboot&#39; command failed
+2021-01-20 17:21:24 INFO Sleeping for 10 seconds after reboot...
+2021-01-20 17:21:34 INFO Pinging after reboot...
+2021-01-20 17:21:45 INFO SSHing after reboot...
+2021-01-20 17:21:46 INFO Connected (version 2.0, client OpenSSH_7.6p1)
+2021-01-20 17:21:46 INFO Authentication (publickey) successful!
+2021-01-20 17:21:46 INFO Retrieving boot diagnostics...
+2021-01-20 17:21:50 INFO See &#39;/tmp/pytest-of-andschwa/pytest-181/test_smoke_Target_Ubuntu_0/diagnostics.txt&#39; for boot diagnostics.
+----- generated html file: file:///home/andschwa/src/lisa/demo.html ------
+======================== short test summary info =========================
+PASSED testsuites/test_smoke_b.py::test_smoke[Target=Ubuntu]
+FAILED testsuites/test_smoke_b.py::test_smoke[Target=Debian] - AssertionError: Pinging 40.123.27.161 after reboot failed
+========= 1 failed, 1 passed, 38 deselected in 541.93s (0:09:01) =========
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="settings">
+<h2>Settings<a class="headerlink" href="#settings" title="Permalink to this headline">¶</a></h2>
+<p>Our opinionated <a class="reference external" href="https://docs.pytest.org/en/stable/usage.html">usage</a> settings are in <code class="docutils literal notranslate"><span class="pre">pytest.ini</span></code>. Adjust them
+(or override them on the CLI) as you see fit! They include:</p>
+<p><code class="docutils literal notranslate"><span class="pre">--no-header</span></code></p>
+<blockquote>
+<div><p>For more succinct display, we suppress the default Pytest header
+with the platform, root directory, plugins, and timeout
+information.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">--tb=short</span></code></p>
+<blockquote>
+<div><p>Since we’re generally testing commands on remote systems, we don’t
+care about the full Python trace when a test fails, so we set the
+<a class="reference external" href="https://docs.pytest.org/en/stable/usage.html#modifying-python-traceback-printing">traceback printing</a>
+to be short.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">-rA</span></code></p>
+<blockquote>
+<div><p>We want the status (and captured logs) of <em>all</em> tests printed in
+the final summary, but Pytest defaults to failed and errored tests
+with <code class="docutils literal notranslate"><span class="pre">fE</span></code>, hence our use of <code class="docutils literal notranslate"><span class="pre">A</span></code>.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">timeout</span> <span class="pre">=</span> <span class="pre">1200</span></code></p>
+<blockquote>
+<div><p>Since we run our tests on remote machines which may hang, we use
+<a class="reference external" href="https://pypi.org/project/pytest-timeout/">pytest-timeout</a> to
+cancel any tests that exceed 20 minutes. Note that the
+<a class="reference internal" href="modules/target.html#module-target" title="target"><code class="xref py py-class docutils literal notranslate"><span class="pre">target</span></code></a> class also has a “timeout” configuration for
+individual commands using <a class="reference external" href="https://www.pyinvoke.org/">Invoke</a>.</p>
+</div></blockquote>
+<div class="section" id="suggestions">
+<h3>Suggestions<a class="headerlink" href="#suggestions" title="Permalink to this headline">¶</a></h3>
+<p>Test developers may wish to run with the flags:</p>
+<p><code class="docutils literal notranslate"><span class="pre">--capture=tee-sys</span></code></p>
+<blockquote>
+<div><p>This will <a class="reference external" href="https://docs.pytest.org/en/stable/capture.html">capture</a> all writes to
+<code class="docutils literal notranslate"><span class="pre">sys.stdout</span></code> and <code class="docutils literal notranslate"><span class="pre">sys.stderr</span></code>, but also pass them to <code class="docutils literal notranslate"><span class="pre">sys</span></code>
+such that they’re printed <em>live</em> (useful when writing tests, but
+annoying when running tests).</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">log_cli=true</span></code></p>
+<blockquote>
+<div><p>Pytest can emit captured <a class="reference external" href="https://docs.pytest.org/en/stable/logging.html">logs</a> live too. Add
+this to <code class="docutils literal notranslate"><span class="pre">pytest.ini</span></code> (and adjust the level and format as
+desired).</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">--tb=auto</span></code></p>
+<blockquote>
+<div><p>To show the full traceback instead of just a line.</p>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">--html=path/to/report.html</span></code></p>
+<blockquote>
+<div><p>We include <a class="reference external" href="https://pytest-html.readthedocs.io/en/latest/">pytest-html</a> as a dependency
+so users can generate HTML reports with all captured stdout,
+stderr, traceback, and logs.</p>
+</div></blockquote>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">LISA</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#install-python-3-7">Install Python 3.7+</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#install-poetry">Install Poetry</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#on-linux-or-wsl">On Linux (or WSL)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#on-windows-in-powershell">On Windows (in PowerShell)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#clone-lisa-and-cd-into-the-git-repo">Clone LISA and <code class="docutils literal notranslate"><span class="pre">cd</span></code> into the Git repo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#install-python-dependencies">Install Python dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#use-lisa">Use LISA</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#enable-azure">Enable Azure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-the-demo">Run the Demo</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#settings">Settings</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#suggestions">Suggestions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="DESIGN.html">Design</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CODE_OF_CONDUCT.html">Code of Conduct</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules/lisa.html">lisa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/target.html">target</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/playbook.html">playbook</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Linux Integration Services Automation</a></li>
+      <li>Next: <a href="DESIGN.html" title="next chapter">Technical Specification Document</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Microsoft Corporation.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/USAGE.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

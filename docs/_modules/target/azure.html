@@ -1,0 +1,304 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>target.azure &#8212; LISA 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for target.azure</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) Microsoft Corporation.</span>
+<span class="c1"># Licensed under the MIT License.</span>
+<span class="sd">&quot;&quot;&quot;Provides an ``Azure(Target)`` implementation using the Azure CLI.&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">typing</span>
+
+<span class="kn">import</span> <span class="nn">invoke</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">invoke.runners</span> <span class="kn">import</span> <span class="n">Result</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">schema</span> <span class="kn">import</span> <span class="n">Optional</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">target.target</span> <span class="kn">import</span> <span class="n">Target</span>
+<span class="kn">from</span> <span class="nn">tenacity</span> <span class="kn">import</span> <span class="n">retry</span><span class="p">,</span> <span class="n">stop_after_attempt</span><span class="p">,</span> <span class="n">wait_exponential</span>  <span class="c1"># type: ignore</span>
+
+<span class="k">if</span> <span class="n">typing</span><span class="o">.</span><span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span>
+
+
+<div class="viewcode-block" id="AzureCLI"><a class="viewcode-back" href="../../modules/target.azure.html#target.azure.AzureCLI">[docs]</a><span class="k">class</span> <span class="nc">AzureCLI</span><span class="p">(</span><span class="n">Target</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Implements Azure-specific target methods.</span>
+
+<span class="sd">    This implementation uses the Azure CLI `az` to automate creating</span>
+<span class="sd">    VMs based on the given parameters.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Custom instance attribute(s).</span>
+    <span class="n">internal_address</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="sd">&quot;&quot;&quot;Internal IP address of this target.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="AzureCLI.schema"><a class="viewcode-back" href="../../modules/target.azure.html#target.azure.AzureCLI.schema">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="c1"># TODO: Maybe validate as URN or path etc.</span>
+            <span class="s2">&quot;image&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">Optional</span><span class="p">(</span><span class="s2">&quot;sku&quot;</span><span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">Optional</span><span class="p">(</span><span class="s2">&quot;location&quot;</span><span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">Optional</span><span class="p">(</span><span class="s2">&quot;networking&quot;</span><span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="AzureCLI.defaults"><a class="viewcode-back" href="../../modules/target.azure.html#target.azure.AzureCLI.defaults">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">defaults</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">Optional</span><span class="p">(</span><span class="s2">&quot;image&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;UbuntuLTS&quot;</span><span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">Optional</span><span class="p">(</span><span class="s2">&quot;sku&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;Standard_DS1_v2&quot;</span><span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">Optional</span><span class="p">(</span><span class="s2">&quot;location&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;eastus2&quot;</span><span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">Optional</span><span class="p">(</span><span class="s2">&quot;networking&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_local</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;A quiet version of `local()`.&quot;&quot;&quot;</span>
+        <span class="c1"># TODO: Consider adding this to the superclass.</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">Target</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;run&quot;</span><span class="p">][</span><span class="s2">&quot;hide&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">invoke</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">invoke</span><span class="o">.</span><span class="n">Config</span><span class="p">(</span><span class="n">overrides</span><span class="o">=</span><span class="n">config</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">context</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="c1"># A class attribute because it’s defined.</span>
+    <span class="n">_az_ok</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="AzureCLI.check_az_cli"><a class="viewcode-back" href="../../modules/target.azure.html#target.azure.AzureCLI.check_az_cli">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">check_az_cli</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Assert that the `az` CLI is installed and logged in.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_az_ok</span><span class="p">:</span>  <span class="c1"># Shortcut if we already checked.</span>
+            <span class="k">return</span>
+        <span class="c1"># E.g. on Ubuntu: `curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash`</span>
+        <span class="k">assert</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_local</span><span class="p">(</span><span class="s2">&quot;az --version&quot;</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="s2">&quot;Please install the `az` CLI!&quot;</span>
+        <span class="c1"># TODO: Login with service principal (az login) and set</span>
+        <span class="c1"># default subscription (az account set -s) using secrets.</span>
+        <span class="n">account</span><span class="p">:</span> <span class="n">Result</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_local</span><span class="p">(</span><span class="s2">&quot;az account show&quot;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">account</span><span class="o">.</span><span class="n">ok</span><span class="p">,</span> <span class="s2">&quot;Please `az login`!&quot;</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">account</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">sub</span><span class="p">[</span><span class="s2">&quot;isDefault&quot;</span><span class="p">],</span> <span class="s2">&quot;Please `az account set -s &lt;subscription&gt;`!&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Using account &#39;</span><span class="si">{</span><span class="n">sub</span><span class="p">[</span><span class="s1">&#39;user&#39;</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39; with subscription &#39;</span><span class="si">{</span><span class="n">sub</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_az_ok</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="AzureCLI.create_boot_storage"><a class="viewcode-back" href="../../modules/target.azure.html#target.azure.AzureCLI.create_boot_storage">[docs]</a>    <span class="k">def</span> <span class="nf">create_boot_storage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Create a separate resource group and storage account for boot diagnostics.&quot;&quot;&quot;</span>
+        <span class="c1"># TODO: Use a different account per user.</span>
+        <span class="n">account</span> <span class="o">=</span> <span class="s2">&quot;pytestbootdiag&quot;</span>
+        <span class="c1"># This command always exits with 0 but returns a string.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_local</span><span class="p">(</span><span class="s2">&quot;az group exists -n pytest-lisa&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;false&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_local</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;az group create -n pytest-lisa --location </span><span class="si">{</span><span class="n">location</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_local</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;az storage account show -g pytest-lisa -n </span><span class="si">{</span><span class="n">account</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_local</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;az storage account create -g pytest-lisa -n </span><span class="si">{</span><span class="n">account</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">account</span></div>
+
+<div class="viewcode-block" id="AzureCLI.allow_ping"><a class="viewcode-back" href="../../modules/target.azure.html#target.azure.AzureCLI.allow_ping">[docs]</a>    <span class="k">def</span> <span class="nf">allow_ping</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Create NSG rules to enable ICMP ping.</span>
+
+<span class="sd">        ICMP ping is disallowed by the Azure load balancer by default, but</span>
+<span class="sd">        there’s strong debate about if this is necessary, and our tests</span>
+<span class="sd">        like to check if the host is up using ping, so we create inbound</span>
+<span class="sd">        and outbound rules in the VM&#39;s network security group to allow it.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;Inbound&quot;</span><span class="p">,</span> <span class="s2">&quot;Outbound&quot;</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">local</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;az network nsg rule create &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;--name allow</span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s2">ICMP --resource-group </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">group</span><span class="si">}</span><span class="s2">-rg &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;--nsg-name </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">NSG --priority 150  &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;--access Allow --direction &#39;</span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s2">&#39; --protocol Icmp &quot;</span>
+                    <span class="s2">&quot;--source-port-ranges &#39;*&#39; --destination-port-ranges &#39;*&#39;&quot;</span><span class="p">,</span>
+                    <span class="n">hide</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Failed creating ICMP allow rules in &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">NSG&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="AzureCLI.parse_data"><a class="viewcode-back" href="../../modules/target.azure.html#target.azure.AzureCLI.parse_data">[docs]</a>    <span class="k">def</span> <span class="nf">parse_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_address</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;privateIpAddress&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">typing</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;publicIpAddress&quot;</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="AzureCLI.deploy"><a class="viewcode-back" href="../../modules/target.azure.html#target.azure.AzureCLI.deploy">[docs]</a>    <span class="k">def</span> <span class="nf">deploy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Given deployment info, deploy a new VM.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>  <span class="c1"># Shortcut if refreshing from cache.</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_data</span><span class="p">()</span>
+
+        <span class="n">AzureCLI</span><span class="o">.</span><span class="n">check_az_cli</span><span class="p">()</span>
+
+        <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;image&quot;</span><span class="p">]</span>
+        <span class="n">sku</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;sku&quot;</span><span class="p">]</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">]</span>
+        <span class="n">networking</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;networking&quot;</span><span class="p">]</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Deploying VM...</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;	Group:		&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">group</span><span class="si">}</span><span class="s2">-rg&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;	Region:		&#39;</span><span class="si">{</span><span class="n">location</span><span class="si">}</span><span class="s2">&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;	Image:		&#39;</span><span class="si">{</span><span class="n">image</span><span class="si">}</span><span class="s2">&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;	SKU:		&#39;</span><span class="si">{</span><span class="n">sku</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">boot_storage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_boot_storage</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_local</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;az group create -n </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">group</span><span class="si">}</span><span class="s2">-rg --location </span><span class="si">{</span><span class="n">location</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># TODO: Accept EULA terms when necessary. Like:</span>
+        <span class="c1">#</span>
+        <span class="c1"># local.run(f&quot;az vm image terms accept --urn {vm_image}&quot;)</span>
+        <span class="c1">#</span>
+        <span class="c1"># However, this command fails unless the terms exist and have yet</span>
+        <span class="c1"># to be accepted.</span>
+
+        <span class="n">vm_command</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;az vm create&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;-g </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">group</span><span class="si">}</span><span class="s2">-rg&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;-n </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;--image </span><span class="si">{</span><span class="n">image</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;--size </span><span class="si">{</span><span class="n">sku</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;--boot-diagnostics-storage </span><span class="si">{</span><span class="n">boot_storage</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;--generate-ssh-keys&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="c1"># TODO: Support setting up to NICs.</span>
+        <span class="k">if</span> <span class="n">networking</span> <span class="o">==</span> <span class="s2">&quot;SRIOV&quot;</span><span class="p">:</span>
+            <span class="n">vm_command</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;--accelerated-networking true&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">local</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">vm_command</span><span class="p">))</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allow_ping</span><span class="p">()</span>
+        <span class="c1"># TODO: Enable auto-shutdown 4 hours from deployment.</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_data</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="AzureCLI.delete"><a class="viewcode-back" href="../../modules/target.azure.html#target.azure.AzureCLI.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Delete the entire allocated resource group.&quot;&quot;&quot;</span>
+        <span class="c1"># TODO: Delete VM &#39;{self.name}&#39;. Only if it was</span>
+        <span class="c1"># the last VM then delete the entire resource group.</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Deleting resource group &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">group</span><span class="si">}</span><span class="s2">-rg&#39;&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">local</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;az group delete -n </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">group</span><span class="si">}</span><span class="s2">-rg --yes --no-wait&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed deleting resource group &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">group</span><span class="si">}</span><span class="s2">-rg&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AzureCLI.get_boot_diagnostics"><a class="viewcode-back" href="../../modules/target.azure.html#target.azure.AzureCLI.get_boot_diagnostics">[docs]</a>    <span class="nd">@retry</span><span class="p">(</span><span class="n">reraise</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="n">wait_exponential</span><span class="p">(),</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop_after_attempt</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+    <span class="k">def</span> <span class="nf">get_boot_diagnostics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Gets the serial console logs.&quot;&quot;&quot;</span>
+        <span class="c1"># NOTE: Some images can cause the `az` CLI to crash because</span>
+        <span class="c1"># their logs aren’t UTF-8 encoded. I’ve filed a bug:</span>
+        <span class="c1"># https://github.com/Azure/azure-cli/issues/15590</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;az vm boot-diagnostics get-boot-log -n </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> -g </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">group</span><span class="si">}</span><span class="s2">-rg&quot;</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="AzureCLI.platform_restart"><a class="viewcode-back" href="../../modules/target.azure.html#target.azure.AzureCLI.platform_restart">[docs]</a>    <span class="k">def</span> <span class="nf">platform_restart</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Should this use `--force` and redeploy?&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;az vm restart -n </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> -g </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">group</span><span class="si">}</span><span class="s2">-rg&quot;</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">LISA</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../USAGE.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../DESIGN.html">Design</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT.html">Code of Conduct</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules/lisa.html">lisa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules/target.html">target</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules/playbook.html">playbook</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Microsoft Corporation.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,29 @@
+target.azure
+============
+
+.. automodule:: target.azure
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      AzureCLI
+   
+   
+
+   
+   
+   
+
+
+

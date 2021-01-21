@@ -1,0 +1,265 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>lisa &#8212; LISA 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="target" href="target.html" />
+    <link rel="prev" title="Microsoft Open Source Code of Conduct" href="../CODE_OF_CONDUCT.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-lisa">
+<span id="lisa"></span><h1>lisa<a class="headerlink" href="#module-lisa" title="Permalink to this headline">¶</a></h1>
+<p>A plugin for organizing, analyzing, and selecting tests.</p>
+<p>This plugin provides the mark <code class="docutils literal notranslate"><span class="pre">pytest.mark.lisa</span></code>, aliased as
+<a class="reference internal" href="#lisa.LISA" title="lisa.LISA"><code class="xref py py-func docutils literal notranslate"><span class="pre">LISA()</span></code></a>, for marking up tests metadata beyond that which
+Pytest provides by default. See the <a class="reference internal" href="#lisa.lisa_schema" title="lisa.lisa_schema"><code class="xref py py-data docutils literal notranslate"><span class="pre">lisa_schema</span></code></a> for the
+expected metadata input.</p>
+<p>Tests can be selected through a <code class="docutils literal notranslate"><span class="pre">playbook.yaml</span></code> file using the
+criteria schema (using the <a class="reference external" href="https://microsoft.github.io/lisa/modules/playbook.html">pytest-playbook</a> plugin). For example:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">criteria</span><span class="p">:</span>
+  <span class="c1"># Select all Priority 0 tests.</span>
+  <span class="p p-Indicator">-</span> <span class="nt">priority</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
+  <span class="c1"># Run tests with &#39;smoke&#39; in the name twice.</span>
+  <span class="p p-Indicator">-</span> <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">smoke</span>
+    <span class="nt">times</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2</span>
+  <span class="c1"># Exclude all tests in Area &quot;xdp&quot;</span>
+  <span class="p p-Indicator">-</span> <span class="nt">area</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">xdp</span>
+    <span class="nt">exclude</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+</pre></div>
+</div>
+<div class="admonition-todo admonition" id="id1">
+<p class="admonition-title">Todo</p>
+<ul class="simple">
+<li><p>Review the <code class="docutils literal notranslate"><span class="pre">criteria</span></code> schema.</p></li>
+<li><p>Provide test metadata statistics via a command-line flag.</p></li>
+<li><p>Assert every test has a LISA marker.</p></li>
+</ul>
+</div>
+<p class="rubric">Functions</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lisa.main" title="lisa.main"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main</span></code></a>()</p></td>
+<td><p>Wrapper function so we can have a <code class="docutils literal notranslate"><span class="pre">lisa</span></code> binary.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lisa.pytest_collection_modifyitems" title="lisa.pytest_collection_modifyitems"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_collection_modifyitems</span></code></a>(session, …)</p></td>
+<td><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/latest/reference.html#pytest.hookspec.pytest_collection_modifyitems">collection modifyitems hook</a> for modifying the selected items (tests).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lisa.pytest_configure" title="lisa.pytest_configure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_configure</span></code></a>(config)</p></td>
+<td><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_configure">configure hook</a> to perform initial configuration.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lisa.pytest_playbook_schema" title="lisa.pytest_playbook_schema"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_playbook_schema</span></code></a>(schema)</p></td>
+<td><p><a class="reference internal" href="playbook.html#playbook.Hooks.pytest_playbook_schema" title="playbook.Hooks.pytest_playbook_schema"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pytest_playbook_schema()</span></code></a> hook to update the playbook schema.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lisa.pytest_xdist_make_scheduler" title="lisa.pytest_xdist_make_scheduler"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pytest_xdist_make_scheduler</span></code></a>(config)</p></td>
+<td><p>pytest-xdist <a class="reference external" href="https://github.com/pytest-dev/pytest-xdist/blob/master/OVERVIEW.md">make scheduler hook</a> for implementing a custom scheduler.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#lisa.validate_mark" title="lisa.validate_mark"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_mark</span></code></a>(mark)</p></td>
+<td><p>Validate each test’s <a class="reference internal" href="#lisa.LISA" title="lisa.LISA"><code class="xref py py-func docutils literal notranslate"><span class="pre">LISA()</span></code></a> parameters.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Classes</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#lisa.LISAScheduling" title="lisa.LISAScheduling"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LISAScheduling</span></code></a>(config[, log])</p></td>
+<td><p>Implement load scheduling across nodes, but grouping by target parameter.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py data">
+<dt id="lisa.LISA">
+<code class="sig-prename descclassname">lisa.</code><code class="sig-name descname">LISA</code><em class="property"> = MarkDecorator(mark=Mark(name='lisa', args=(), kwargs={}))</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-lisa/lisa.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lisa.LISA" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for the Pytest mark <code class="docutils literal notranslate"><span class="pre">lisa</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="lisa.main">
+<code class="sig-prename descclassname">lisa.</code><code class="sig-name descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-lisa/lisa.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/lisa.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lisa.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper function so we can have a <code class="docutils literal notranslate"><span class="pre">lisa</span></code> binary.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="lisa.pytest_configure">
+<code class="sig-prename descclassname">lisa.</code><code class="sig-name descname">pytest_configure</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span><span class="p">:</span> <span class="n">Config</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-lisa/lisa.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/lisa.html#pytest_configure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lisa.pytest_configure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_configure">configure hook</a> to perform initial configuration.</p>
+<p>We’re registering our custom marker so that it passes
+<code class="docutils literal notranslate"><span class="pre">--strict-markers</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="lisa.pytest_playbook_schema">
+<code class="sig-prename descclassname">lisa.</code><code class="sig-name descname">pytest_playbook_schema</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">schema</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-lisa/lisa.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/lisa.html#pytest_playbook_schema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lisa.pytest_playbook_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p><a class="reference internal" href="playbook.html#playbook.Hooks.pytest_playbook_schema" title="playbook.Hooks.pytest_playbook_schema"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pytest_playbook_schema()</span></code></a> hook to update the playbook schema.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt id="lisa.lisa_schema">
+<code class="sig-prename descclassname">lisa.</code><code class="sig-name descname">lisa_schema</code><em class="property"> = Schema({Literal(&quot;platform&quot;, description=&quot;The test's intended platform.&quot;): &lt;class 'str'&gt;, Literal(&quot;category&quot;, description=&quot;The kind of test this is.&quot;): Or('Functional', 'Performance', 'Stress', 'Community', 'Longhaul'), Literal(&quot;area&quot;, description=&quot;The test's area (or 'feature').&quot;): &lt;class 'str'&gt;, Literal(&quot;priority&quot;, description=&quot;The test's priority with 0 being the highest.&quot;): Or(0, 1, 2, 3), Optional('tags'): [&lt;class 'str'&gt;], Optional('features'): [&lt;class 'str'&gt;], Optional('reuse'): &lt;class 'bool'&gt;, Optional('count'): And(&lt;class 'int'&gt;, &lt;function &lt;lambda&gt;&gt;)})</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-lisa/lisa.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lisa.lisa_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Schema used to validate a test’s metadata.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="lisa.validate_mark">
+<code class="sig-prename descclassname">lisa.</code><code class="sig-name descname">validate_mark</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mark</span><span class="p">:</span> <span class="n">Mark</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-lisa/lisa.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/lisa.html#validate_mark"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lisa.validate_mark" title="Permalink to this definition">¶</a></dt>
+<dd><p>Validate each test’s <a class="reference internal" href="#lisa.LISA" title="lisa.LISA"><code class="xref py py-func docutils literal notranslate"><span class="pre">LISA()</span></code></a> parameters.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="lisa.pytest_collection_modifyitems">
+<code class="sig-prename descclassname">lisa.</code><code class="sig-name descname">pytest_collection_modifyitems</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">session</span><span class="p">:</span> <span class="n">Session</span></em>, <em class="sig-param"><span class="n">config</span><span class="p">:</span> <span class="n">Config</span></em>, <em class="sig-param"><span class="n">items</span><span class="p">:</span> <span class="n">List<span class="p">[</span>Item<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-lisa/lisa.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/lisa.html#pytest_collection_modifyitems"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lisa.pytest_collection_modifyitems" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pytest <a class="reference external" href="https://docs.pytest.org/en/latest/reference.html#pytest.hookspec.pytest_collection_modifyitems">collection modifyitems hook</a> for modifying the selected items (tests).</p>
+<p>First we validate all the <a class="reference internal" href="#lisa.LISA" title="lisa.LISA"><code class="xref py py-func docutils literal notranslate"><span class="pre">LISA()</span></code></a> marks on the collected
+tests. Then we parse the given <code class="docutils literal notranslate"><span class="pre">criteria</span></code> in the playbook to
+include or exclude tests. We do not care if the <code class="docutils literal notranslate"><span class="pre">platform</span></code>
+mismatches because we intend a multiplicative effect where all
+selected tests in a playbook are run on all the targets.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="lisa.LISAScheduling">
+<em class="property">class </em><code class="sig-prename descclassname">lisa.</code><code class="sig-name descname">LISAScheduling</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span><span class="p">:</span> <span class="n">Config</span></em>, <em class="sig-param"><span class="n">log</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-lisa/lisa.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/lisa.html#LISAScheduling"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lisa.LISAScheduling" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">xdist.scheduler.loadscope.LoadScopeScheduling</span></code></p>
+<p>Implement load scheduling across nodes, but grouping by target parameter.</p>
+<p>This algorithm ensures that all tests which share the same set of
+parameters (namely the target) will run on the same executor as a
+single work-unit.</p>
+<div class="admonition-todo admonition" id="id2">
+<p class="admonition-title">Todo</p>
+<p>This essentially confines the targets and one target won’t be
+spun up multiple times when run in parallel, so we should make
+this scheduler optional, as an alternative scenario is to spin
+up multiple near-identical instances of a target in order to
+run tests in parallel.</p>
+</div>
+<p>This is modeled after the built-in <code class="docutils literal notranslate"><span class="pre">LoadFileScheduling</span></code>, which
+also simply subclasses <code class="docutils literal notranslate"><span class="pre">LoadScopeScheduling</span></code>. See
+<code class="docutils literal notranslate"><span class="pre">_split_scope</span></code> for the important part. Note that we can extend
+this to implement any kind of scheduling algorithm we want.</p>
+<dl class="py method">
+<dt id="lisa.LISAScheduling.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span><span class="p">:</span> <span class="n">Config</span></em>, <em class="sig-param"><span class="n">log</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-lisa/lisa.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/lisa.html#LISAScheduling.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lisa.LISAScheduling.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="lisa.pytest_xdist_make_scheduler">
+<code class="sig-prename descclassname">lisa.</code><code class="sig-name descname">pytest_xdist_make_scheduler</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span><span class="p">:</span> <span class="n">Config</span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#lisa.LISAScheduling" title="lisa.LISAScheduling">LISAScheduling</a><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-lisa/lisa.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/lisa.html#pytest_xdist_make_scheduler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lisa.pytest_xdist_make_scheduler" title="Permalink to this definition">¶</a></dt>
+<dd><p>pytest-xdist <a class="reference external" href="https://github.com/pytest-dev/pytest-xdist/blob/master/OVERVIEW.md">make scheduler hook</a> for implementing a custom scheduler.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">LISA</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../USAGE.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../DESIGN.html">Design</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">lisa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="target.html">target</a></li>
+<li class="toctree-l1"><a class="reference internal" href="playbook.html">playbook</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../CODE_OF_CONDUCT.html" title="previous chapter">Microsoft Open Source Code of Conduct</a></li>
+      <li>Next: <a href="target.html" title="next chapter">target</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Microsoft Corporation.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/modules/lisa.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

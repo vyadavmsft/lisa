@@ -1,0 +1,33 @@
+﻿target
+======
+
+.. automodule:: target
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+
+.. rubric:: Modules
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   target.azure
+   target.plugin
+   target.target
+

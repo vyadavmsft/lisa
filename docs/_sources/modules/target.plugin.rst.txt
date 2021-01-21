@@ -1,0 +1,43 @@
+target.plugin
+=============
+
+.. automodule:: target.plugin
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      c_target
+      cleanup_target
+      delete_targets
+      get_target
+      get_targets
+      m_target
+      pytest_addoption
+      pytest_configure
+      pytest_generate_tests
+      pytest_playbook_schema
+      pytest_sessionstart
+      pytest_unconfigure
+      target
+      target_pool
+      targets
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

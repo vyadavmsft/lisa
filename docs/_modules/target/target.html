@@ -1,0 +1,477 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>target.target &#8212; LISA 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for target.target</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) Microsoft Corporation.</span>
+<span class="c1"># Licensed under the MIT License.</span>
+<span class="sd">&quot;&quot;&quot;Provides the abstract base :py:class:`~target.target.Target` class.</span>
+
+<span class="sd">This abstract base class provides the building blocks for any platform</span>
+<span class="sd">support that could be required. Users simply define a subclass with</span>
+<span class="sd">the abstract methods implemented to deploy or delete the target</span>
+<span class="sd">appropriately.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span> <span class="nn">dataclasses</span>
+<span class="kn">import</span> <span class="nn">platform</span>
+<span class="kn">import</span> <span class="nn">typing</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">BytesIO</span>
+
+<span class="kn">import</span> <span class="nn">fabric</span>  <span class="c1"># type: ignore</span>
+<span class="kn">import</span> <span class="nn">invoke</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">invoke.runners</span> <span class="kn">import</span> <span class="n">Result</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">schema</span> <span class="kn">import</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Schema</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">tenacity</span> <span class="kn">import</span> <span class="p">(</span>  <span class="c1"># type: ignore</span>
+    <span class="n">retry</span><span class="p">,</span>
+    <span class="n">retry_if_result</span><span class="p">,</span>
+    <span class="n">stop_after_attempt</span><span class="p">,</span>
+    <span class="n">wait_exponential</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">if</span> <span class="n">typing</span><span class="o">.</span><span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Type</span>
+
+
+<div class="viewcode-block" id="TargetData"><a class="viewcode-back" href="../../modules/target.target.html#target.target.TargetData">[docs]</a><span class="nd">@dataclasses</span><span class="o">.</span><span class="n">dataclass</span>
+<span class="k">class</span> <span class="nc">TargetData</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This class holds serializable data for a :py:class:`Target`.</span>
+
+<span class="sd">    This is an internal detail. It is separated out so we can easily</span>
+<span class="sd">    serialize to and from JSON in order to enable caching. By</span>
+<span class="sd">    decoupling these we prevent users from having to understand the</span>
+<span class="sd">    semantics of a ``dataclass``, and fields added to subclasses don&#39;t</span>
+<span class="sd">    interfere with serialization.</span>
+
+<span class="sd">    .. TODO::</span>
+
+<span class="sd">       Consider using more from ``dataclasses``, such as ``field()``</span>
+<span class="sd">       and ``__post_init__()``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">group</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+    <span class="n">features</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="n">number</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">locked</span><span class="p">:</span> <span class="nb">bool</span>
+
+<div class="viewcode-block" id="TargetData.to_json"><a class="viewcode-back" href="../../modules/target.target.html#target.target.TargetData.to_json">[docs]</a>    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Returns a JSON-serializable representation of the ``Target``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">asdict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TargetData.from_json"><a class="viewcode-back" href="../../modules/target.target.html#target.target.TargetData.from_json">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_json</span><span class="p">(</span><span class="n">json</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Target</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Instantiates the correct ``Target`` subclass given the JSON representation.&quot;&quot;&quot;</span>
+        <span class="bp">cls</span> <span class="o">=</span> <span class="n">Target</span><span class="o">.</span><span class="n">get_platform</span><span class="p">(</span><span class="n">json</span><span class="p">[</span><span class="s2">&quot;params&quot;</span><span class="p">][</span><span class="s2">&quot;platform&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">json</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="Target"><a class="viewcode-back" href="../../modules/target.target.html#target.target.Target">[docs]</a><span class="k">class</span> <span class="nc">Target</span><span class="p">(</span><span class="n">TargetData</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">ABCMeta</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This class represents a remote Linux target.</span>
+
+<span class="sd">    As a partially abstract base class, it is meant to be subclassed</span>
+<span class="sd">    to provide platform support. So ``Target`` as a class maps to the</span>
+<span class="sd">    concept of a Linux target machine reachable via SSH (through</span>
+<span class="sd">    :py:attr:`conn`, an instance of `Fabric.Connection`_). Each</span>
+<span class="sd">    subclass of ``Target`` provides the necessary implementation to</span>
+<span class="sd">    instantiate an actual Linux target, by deploying it on that</span>
+<span class="sd">    platform. Each _instance_ of a platform-specific subclass of</span>
+<span class="sd">    ``Target`` maps to an actual Linux target that has been deployed</span>
+<span class="sd">    on that platform.</span>
+
+<span class="sd">    .. _Fabric.Connection: https://docs.fabfile.org/en/stable/api/connection.html</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Typed instance attributes (not class attributes) in addition to</span>
+    <span class="c1"># those inherited from the dataclass `TargetData`. These exist</span>
+    <span class="c1"># here and not on the superclass because they shouldn’t be cached.</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">host</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">conn</span><span class="p">:</span> <span class="n">fabric</span><span class="o">.</span><span class="n">Connection</span>
+    <span class="sd">&quot;&quot;&quot;Used for SSH access, see `Fabric.Connection`_&quot;&quot;&quot;</span>
+
+    <span class="c1"># Setup a sane configuration for local and remote commands. Note</span>
+    <span class="c1"># that the defaults between Fabric and Invoke are different, so we</span>
+    <span class="c1"># use their Config classes explicitly later.</span>
+    <span class="n">_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;run&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="c1"># Show each command as its run.</span>
+            <span class="s2">&quot;echo&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="c1"># Disable stdin forwarding.</span>
+            <span class="s2">&quot;in_stream&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="c1"># Don’t let remote commands take longer than twenty minutes</span>
+            <span class="c1"># (unless later overridden). This is to prevent hangs.</span>
+            <span class="s2">&quot;command_timeout&quot;</span><span class="p">:</span> <span class="mi">1200</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+<div class="viewcode-block" id="Target.__init__"><a class="viewcode-back" href="../../modules/target.target.html#target.target.Target.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+        <span class="n">features</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+        <span class="n">number</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">locked</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates and deploys an instance of :py:class:`Target`.</span>
+
+<span class="sd">        :param group: is a unique ID for the group of associated resources</span>
+<span class="sd">        :param params: is the input parameters conforming to `schema()`</span>
+<span class="sd">        :param features: is set of arbitrary feature requirements</span>
+<span class="sd">        :param data: is the cached data for the target</span>
+<span class="sd">        :param number: is the numerical ID of this target in its group</span>
+<span class="sd">        :param locked: is the state of the target&#39;s availability</span>
+
+<span class="sd">        Subclass implementations of ``Target`` do not need to (and</span>
+<span class="sd">        should not) override :py:meth:`__init__` as it is setup such</span>
+<span class="sd">        that all platform-specific setup logic can be encoded in</span>
+<span class="sd">        :py:meth:`deploy` instead, which this calls.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">group</span> <span class="o">=</span> <span class="n">group</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_schema</span><span class="p">()</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">features</span> <span class="o">=</span> <span class="n">features</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">number</span> <span class="o">=</span> <span class="n">number</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">locked</span> <span class="o">=</span> <span class="n">locked</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">group</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">number</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">deploy</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to deploy &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">fabric_config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">fabric_config</span><span class="p">[</span><span class="s2">&quot;run&quot;</span><span class="p">][</span><span class="s2">&quot;env&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>  <span class="c1"># type: ignore</span>
+            <span class="c1"># Set PATH since it’s not a login shell.</span>
+            <span class="s2">&quot;PATH&quot;</span><span class="p">:</span> <span class="s2">&quot;/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin&quot;</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">fabric</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">fabric</span><span class="o">.</span><span class="n">Config</span><span class="p">(</span><span class="n">overrides</span><span class="o">=</span><span class="n">fabric_config</span><span class="p">),</span>
+            <span class="n">inline_ssh_env</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+    <span class="c1"># NOTE: This ought to be a property, but the combination of</span>
+    <span class="c1"># @classmethod, @property, and @abstractmethod is only supported</span>
+    <span class="c1"># in Python 3.9 and up.</span>
+<div class="viewcode-block" id="Target.schema"><a class="viewcode-back" href="../../modules/target.target.html#target.target.Target.schema">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mapping</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Must return a mapping for expected instance parameters.</span>
+
+<span class="sd">        The items in this mapping are added to the playbook schema, so</span>
+<span class="sd">        they may contain objects from the `schema`_ library. Each</span>
+<span class="sd">        target in the playbook will have ``name`` and ``platform``</span>
+<span class="sd">        keys in addition to those specified here (they&#39;re merged).</span>
+<span class="sd">        Parameters should generally be ``schema.Optional``. If the</span>
+<span class="sd">        parameter should have a shared but mutable default value, set</span>
+<span class="sd">        it in ``defaults``.</span>
+
+<span class="sd">        .. _schema: https://github.com/keleshev/schema</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+<div class="viewcode-block" id="Target.defaults"><a class="viewcode-back" href="../../modules/target.target.html#target.target.Target.defaults">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">defaults</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mapping</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Can return a mapping for default parameters.</span>
+
+<span class="sd">        If specified, it must contain only ``schema.Optional``</span>
+<span class="sd">        elements, where the names and types match those in</span>
+<span class="sd">        :py:meth:`schema`, but with a set default value, and those in</span>
+<span class="sd">        :py:meth:`schema` should not contain default values. This is</span>
+<span class="sd">        used a base for each target.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{}</span></div>
+
+<div class="viewcode-block" id="Target.deploy"><a class="viewcode-back" href="../../modules/target.target.html#target.target.Target.deploy">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">deploy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Must deploy the target resources and return the hostname.</span>
+
+<span class="sd">        Subclass implementations can treat this like ``__init__`` with</span>
+<span class="sd">        :py:meth:`schema` defining the input ``params``.</span>
+
+<span class="sd">        Data which should be cached must be saved to :py:attr:`data`.</span>
+
+<span class="sd">        If :py:attr:`data` is populated then implementations should</span>
+<span class="sd">        assume they&#39;re refreshing a cached target.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+<div class="viewcode-block" id="Target.delete"><a class="viewcode-back" href="../../modules/target.target.html#target.target.Target.delete">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Must delete the target&#39;s resources.</span>
+
+<span class="sd">        If this is the last target in its group then implementations</span>
+<span class="sd">        should delete the group resource too.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+    <span class="c1"># Internal details follow:</span>
+
+    <span class="n">_platform_description</span> <span class="o">=</span> <span class="s2">&quot;The class name of the platform implementation.&quot;</span>
+
+<div class="viewcode-block" id="Target.get_defaults"><a class="viewcode-back" href="../../modules/target.target.html#target.target.Target.get_defaults">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_defaults</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">,</span> <span class="n">Schema</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Returns a tuple of &quot;platform key&quot; / &quot;defaults value&quot; pairs.</span>
+
+<span class="sd">        This is an internal detail, used when generating the</span>
+<span class="sd">        playbook&#39;s schema. Subclasses should not override this.</span>
+
+<span class="sd">        The key is an optional literal, the name of the subclass for</span>
+<span class="sd">        the platform, with a default value of the validated</span>
+<span class="sd">        :py:meth:`defaults` schema when given no input (hence they</span>
+<span class="sd">        must all be optional). The value is reference schema</span>
+<span class="sd">        definition generated from the :py:meth:`defaults` dict.</span>
+
+<span class="sd">        When generating the playbook&#39;s schema all the platforms&#39;</span>
+<span class="sd">        tuples are mapped into a single dict.</span>
+
+<span class="sd">        .. TODO::</span>
+
+<span class="sd">           Assert that the set of key names in each ``defaults()`` is</span>
+<span class="sd">           a subset of the key names in the corresponding</span>
+<span class="sd">           ``schema()``.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">Optional</span><span class="p">(</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="n">Schema</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">defaults</span><span class="p">())</span><span class="o">.</span><span class="n">validate</span><span class="p">({}),</span>
+                <span class="n">description</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_platform_description</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">Schema</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">defaults</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">_Defaults&quot;</span><span class="p">,</span> <span class="n">as_reference</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Target.get_schema"><a class="viewcode-back" href="../../modules/target.target.html#target.target.Target.get_schema">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Schema</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Returns a reference schema definition for the class parameters.</span>
+
+<span class="sd">        This is an internal detail, used when generating the</span>
+<span class="sd">        playbook&#39;s schema. Subclasses should not override this.</span>
+
+<span class="sd">        We generate the whole definition by combining the values of</span>
+<span class="sd">        :py:meth:`schema` (which is defined by each platform&#39;s</span>
+<span class="sd">        implementation) with two required keys:</span>
+
+<span class="sd">        * ``name``: A friendly name for the target.</span>
+<span class="sd">        * ``platform``: The name of the subclass for the platform.</span>
+
+<span class="sd">        When generating the playbook&#39;s schema all the platforms&#39;</span>
+<span class="sd">        schemata are mapped into an &#39;any of&#39; schema.</span>
+
+<span class="sd">        .. TODO::</span>
+
+<span class="sd">           Perhaps elevate ‘name’ to the key, with the nested schema</span>
+<span class="sd">           as the value.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Schema</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="c1"># We’re adding ‘name’ and ‘platform’ keys.</span>
+                <span class="n">Literal</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A friendly name for the target.&quot;</span><span class="p">):</span> <span class="nb">str</span><span class="p">,</span>
+                <span class="n">Literal</span><span class="p">(</span>
+                    <span class="s2">&quot;platform&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_platform_description</span>
+                <span class="p">):</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+                <span class="c1"># Unpack the rest of the schema’s items.</span>
+                <span class="o">**</span><span class="bp">cls</span><span class="o">.</span><span class="n">schema</span><span class="p">(),</span>
+            <span class="p">},</span>
+            <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">_Schema&quot;</span><span class="p">,</span>
+            <span class="n">as_reference</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Target.get_platform"><a class="viewcode-back" href="../../modules/target.target.html#target.target.Target.get_platform">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_platform</span><span class="p">(</span><span class="n">platform</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">Target</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Returns the :py:class:`Target` subclass for the named platform.&quot;&quot;&quot;</span>
+        <span class="bp">cls</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">Type</span><span class="p">[</span><span class="n">Target</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">Target</span><span class="o">.</span><span class="n">__subclasses__</span><span class="p">()</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="n">platform</span><span class="p">),</span>
+            <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">assert</span> <span class="bp">cls</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Platform implementation not found for &#39;</span><span class="si">{</span><span class="n">platform</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span></div>
+
+    <span class="c1"># Platform-agnostic functionality should be added here:</span>
+
+    <span class="n">_local_context</span> <span class="o">=</span> <span class="n">invoke</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">invoke</span><span class="o">.</span><span class="n">Config</span><span class="p">(</span><span class="n">overrides</span><span class="o">=</span><span class="n">_config</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Target.local"><a class="viewcode-back" href="../../modules/target.target.html#target.target.Target.local">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">local</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;This patches Fabric&#39;s ``local()`` function to ignore SSH environment.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Target</span><span class="o">.</span><span class="n">_local_context</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Target.ping"><a class="viewcode-back" href="../../modules/target.target.html#target.target.Target.ping">[docs]</a>    <span class="nd">@retry</span><span class="p">(</span>
+        <span class="n">retry</span><span class="o">=</span><span class="n">retry_if_result</span><span class="p">(</span><span class="k">lambda</span> <span class="n">result</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">failed</span><span class="p">),</span>
+        <span class="n">retry_error_callback</span><span class="o">=</span><span class="p">(</span><span class="k">lambda</span> <span class="n">retry_state</span><span class="p">:</span> <span class="n">retry_state</span><span class="o">.</span><span class="n">outcome</span><span class="o">.</span><span class="n">result</span><span class="p">()),</span>
+        <span class="n">wait</span><span class="o">=</span><span class="n">wait_exponential</span><span class="p">(),</span>
+        <span class="n">stop</span><span class="o">=</span><span class="n">stop_after_attempt</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">ping</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Ping the node from the local system in a cross-platform manner.</span>
+
+<span class="sd">        This is setup such that it retries five times when the exit</span>
+<span class="sd">        code is nonzero, with an exponential backoff. Since we want to</span>
+<span class="sd">        return the command&#39;s result regardless of failure, we suppress</span>
+<span class="sd">        `Invoke`_&#39;s exception with ``warn=True`` and `Tenacity`_&#39;s exception</span>
+<span class="sd">        with ``retry_error_callback=...``.</span>
+
+<span class="sd">        .. _Invoke: https://www.pyinvoke.org/</span>
+<span class="sd">        .. _Tenacity: https://tenacity.readthedocs.io/en/latest/</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="s2">&quot;-c 1&quot;</span> <span class="k">if</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Linux&quot;</span> <span class="k">else</span> <span class="s2">&quot;-n 1&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ping </span><span class="si">{</span><span class="n">flag</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Target.cat"><a class="viewcode-back" href="../../modules/target.target.html#target.target.Target.cat">[docs]</a>    <span class="k">def</span> <span class="nf">cat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Gets the value of a remote file without a temporary file.&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">BytesIO</span><span class="p">()</span> <span class="k">as</span> <span class="n">buf</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">buf</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">buf</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="SSH"><a class="viewcode-back" href="../../modules/target.target.html#target.target.SSH">[docs]</a><span class="k">class</span> <span class="nc">SSH</span><span class="p">(</span><span class="n">Target</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This platform simply connects to existing targets.</span>
+
+<span class="sd">    It does not deploy nor delete the target. The default ``host`` is</span>
+<span class="sd">    ``localhost`` so this can be used for testing against the user&#39;s</span>
+<span class="sd">    system (if SSH is enabled).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SSH.schema"><a class="viewcode-back" href="../../modules/target.target.html#target.target.SSH.schema">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Takes a ``host`` parameter.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">Optional</span><span class="p">(</span><span class="s2">&quot;host&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The address of the destination target.&quot;</span><span class="p">):</span> <span class="nb">str</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="SSH.defaults"><a class="viewcode-back" href="../../modules/target.target.html#target.target.SSH.defaults">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">defaults</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Defaults to ``localhost``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">Optional</span><span class="p">(</span>
+                <span class="s2">&quot;host&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The default value for host.&quot;</span>
+            <span class="p">):</span> <span class="nb">str</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="SSH.deploy"><a class="viewcode-back" href="../../modules/target.target.html#target.target.SSH.deploy">[docs]</a>    <span class="k">def</span> <span class="nf">deploy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;host&quot;</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="SSH.delete"><a class="viewcode-back" href="../../modules/target.target.html#target.target.SSH.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">pass</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">LISA</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../USAGE.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../DESIGN.html">Design</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT.html">Code of Conduct</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules/lisa.html">lisa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules/target.html">target</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules/playbook.html">playbook</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Microsoft Corporation.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,480 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contributing Guidelines &#8212; LISA 0.1.0 documentation</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Microsoft Open Source Code of Conduct" href="CODE_OF_CONDUCT.html" />
+    <link rel="prev" title="Technical Specification Document" href="DESIGN.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="contributing-guidelines">
+<h1>Contributing Guidelines<a class="headerlink" href="#contributing-guidelines" title="Permalink to this headline">¶</a></h1>
+<p>This document describes the existing developer tooling we have in place (and what to
+expect of it), as well as our design and development philosophy.</p>
+<p>See <a class="reference external" href="https://learnxinyminutes.com/docs/python/">learnxinyminutes.com</a> for a
+Python crash course.</p>
+<div class="section" id="pytest">
+<h2>Pytest<a class="headerlink" href="#pytest" title="Permalink to this headline">¶</a></h2>
+<p>Underneath the hood, <code class="docutils literal notranslate"><span class="pre">lisa</span></code> is just <a class="reference external" href="https://docs.pytest.org/en/stable/">Pytest</a>! Refer to its
+<a class="reference external" href="https://docs.pytest.org/en/stable/contents.html">documentation</a>.</p>
+<p>Some useful CLI options are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--help</span></code> and <code class="docutils literal notranslate"><span class="pre">--verbose</span></code>, of course</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--log-cli-level=DEBUG</span></code> to enable live output of all <code class="docutils literal notranslate"><span class="pre">DEBUG</span></code> and above logs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--collect-only</span></code> to show which tests would be selected (but don’t run them)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--setup-only</span></code> to show in which order fixtures and tests would be setup (but
+don’t run them)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--flake8</span> <span class="pre">--mypy</span> <span class="pre">-m</span> <span class="pre">&quot;flake8</span> <span class="pre">or</span> <span class="pre">mypy&quot;</span></code> to run the semantic analysis tools</p></li>
+</ul>
+</div>
+<div class="section" id="yaml-schema">
+<h2>YAML Schema<a class="headerlink" href="#yaml-schema" title="Permalink to this headline">¶</a></h2>
+<p>The registered playbook schema can be generated using <code class="docutils literal notranslate"><span class="pre">--print-schema</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>lisa --print-schema<span class="o">=</span>playbooks/schema.json
+</pre></div>
+</div>
+<p>This will create a file <code class="docutils literal notranslate"><span class="pre">playbooks/schema.json</span></code> with the <a class="reference external" href="https://json-schema.org/">JSON
+Schema</a> for all the registered schemata (including
+those added in any local plugins). Note that this file is committed to the repo
+for the public schema, but you can generate your own (or update it) with the
+above command.</p>
+<p>Using the LSP <a class="reference external" href="https://github.com/redhat-developer/yaml-language-server">yaml-language-server</a> you can setup almost any editor to lint
+the playbook files against the schema. Either add as a comment to the top of the
+playbook file:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># yaml-language-server: $schema=file:///path/to/playbooks/schema.json</span>
+</pre></div>
+</div>
+<p>Or set <code class="docutils literal notranslate"><span class="pre">yaml.schemas</span></code> as appropriate for your editor. Also ensure that
+<code class="docutils literal notranslate"><span class="pre">yaml-language-server</span></code> is installed, which you can do via:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>npm install -g yaml-language-server
+</pre></div>
+</div>
+<p>See <a class="reference external" href="https://learnxinyminutes.com/docs/yaml/">learnxinyminutes.com</a> for a crash
+course in YAML.</p>
+</div>
+<div class="section" id="poetry">
+<h2>Poetry<a class="headerlink" href="#poetry" title="Permalink to this headline">¶</a></h2>
+<p>If you have ran <code class="docutils literal notranslate"><span class="pre">lisa</span></code> already, then you have installed and used the <code class="docutils literal notranslate"><span class="pre">poetry</span></code>
+tool. <a class="reference external" href="https://python-poetry.org/docs/">Poetry</a> is a <a class="reference external" href="https://www.python.org/dev/peps/pep-0518/">PEP 518</a> compliant and cross-platform build system
+which handles our Python dependencies and environment.</p>
+<p>This project’s dependencies are found in the <a class="reference external" href="pyproject.toml"><code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></a>
+file. This is similar to but more powerful than the familiar <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code>.
+With <a class="reference external" href="https://www.python.org/dev/peps/pep-0518/">PEP 518</a> and <a class="reference external" href="https://www.python.org/dev/peps/pep-0621/">PEP 621</a>.</p>
+<div class="section" id="metadata">
+<h3>Metadata<a class="headerlink" href="#metadata" title="Permalink to this headline">¶</a></h3>
+<p>The first section, <code class="docutils literal notranslate"><span class="pre">tool.poetry</span></code>, defines the project’s metadata (name, version,
+description, authors, and license) which will be embedded in the final built
+package.</p>
+<p>The chosen version follows <a class="reference external" href="https://semver.org/">Semantic Versioning</a>, with the <a class="reference external" href="https://packaging.python.org/guides/distributing-packages-using-setuptools/#choosing-a-versioning-scheme">Python specific
+pre-release versioning suffix</a> ‘.dev1’. Since this is “pytest-lisa” it
+seemed appropriate to set our version to ‘3.0.0.dev1’, that is, “the first
+development release of pytest-lisa.”</p>
+</div>
+<div class="section" id="package-dependencies">
+<h3>Package Dependencies<a class="headerlink" href="#package-dependencies" title="Permalink to this headline">¶</a></h3>
+<p>The next section, <code class="docutils literal notranslate"><span class="pre">tool.poetry.dependencies</span></code>, is where <code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">add</span> <span class="pre">&lt;package_name&gt;</span></code> records our required packages.</p>
+<p>Poetry automatically creates and manages <a class="reference external" href="https://python-poetry.org/docs/managing-environments/">isolated
+environments</a>.</p>
+<p>From the documentation:</p>
+<blockquote>
+<div><p>Poetry will first check if it’s currently running inside a virtual
+environment. If it is, it will use it directly without creating a new one. But
+if it’s not, it will use one that it has already created or create a brand new
+one for you.</p>
+</div></blockquote>
+<p>On Linux, your initial run of <code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">install</span></code> will cause Poetry to
+automatically setup a new <a class="reference external" href="https://docs.python-guide.org/dev/virtualenvs/">virtualenv</a> using <a class="reference external" href="https://github.com/pyenv/pyenv">pyenv</a>. If you are developing
+on Windows, you may need to setup your own, perhaps using <a class="reference external" href="https://docs.conda.io/en/latest/">Conda</a>.</p>
+<p>The path to the virtualenv used by Poetry can found with this command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>poetry env list --full-path
+</pre></div>
+</div>
+<p>Use it to configure your editor.</p>
+</div>
+<div class="section" id="developer-dependencies">
+<h3>Developer Dependencies<a class="headerlink" href="#developer-dependencies" title="Permalink to this headline">¶</a></h3>
+<p>Similar to the previous section, <code class="docutils literal notranslate"><span class="pre">tool.poetry.dev-dependencies</span></code> is where <code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">add</span> <span class="pre">--dev</span> <span class="pre">&lt;package_name&gt;</span></code> records our <em>developer</em> packages. These are not
+necessary for LISAv3 to execute, but are used by developers to automatically
+adhere to our coding standards.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/psf/black">Black</a>, the opinionated code formatter which
+settles all debates as to how our Python files should be formatted. It follows
+<a class="reference external" href="https://www.python.org/dev/peps/pep-0008/">PEP 8</a>, the official Python style
+guide, and where ambiguous makes the decision for us.</p></li>
+<li><p><a class="reference external" href="https://flake8.pycqa.org/en/latest/">Flake8</a> (and integrations), the semantic
+analyzer, used to coordinate most of the other tools.</p></li>
+<li><p><a class="reference external" href="https://timothycrosley.github.io/isort/">isort</a>, the <code class="docutils literal notranslate"><span class="pre">import</span></code> sorter, which
+automatically splits imports into the expected, alphabetized sections.</p></li>
+<li><p><a class="reference external" href="http://mypy-lang.org/">mypy</a>, the static type checker, which coupled with
+type annotations allows us to avoid the pitfalls of Python being a dynamically
+typed language.</p></li>
+<li><p><a class="reference external" href="https://github.com/palantir/python-language-server">python-language-server</a>
+(and integrations), the de facto LSP server. While Microsoft is developing
+their own LSP servers, they do not integrate with the existing ecosystem of
+tools, and their latest tool, Pyright, simply does not support
+<code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>. Since pyls is used far more widely, and supports every
+editor, we use it.</p></li>
+<li><p><a class="reference external" href="https://github.com/python-rope/rope">rope</a>, to provide completions and
+renaming support to pyls.</p></li>
+</ul>
+<p>With these packages installed and a correctly setup editor (see below, and feel
+free to reach out to us), your code should automatically follow all the
+standards which we could automate.</p>
+<p>The final sections, <code class="docutils literal notranslate"><span class="pre">tool.black</span></code>, <code class="docutils literal notranslate"><span class="pre">tool.isort</span></code>, <code class="docutils literal notranslate"><span class="pre">build-system</span></code>, and files
+<code class="docutils literal notranslate"><span class="pre">mypy.ini</span></code> and <code class="docutils literal notranslate"><span class="pre">.flake8</span></code> configure the tools per their recommendations.</p>
+</div>
+</div>
+<div class="section" id="editor-setup">
+<h2>Editor Setup<a class="headerlink" href="#editor-setup" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="visual-studio-code">
+<h3>Visual Studio Code<a class="headerlink" href="#visual-studio-code" title="Permalink to this headline">¶</a></h3>
+<p>First, click the Python version in the bottom left, then enter the path emitted
+by the command above. This will point Code to the Poetry virtual environment.</p>
+<p>Make sure below settings are in root level of <code class="docutils literal notranslate"><span class="pre">.vscode/settings.json</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="nt">&quot;python.analysis.typeCheckingMode&quot;</span><span class="p">:</span> <span class="s2">&quot;strict&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;python.formatting.provider&quot;</span><span class="p">:</span> <span class="s2">&quot;black&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;python.linting.enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&quot;python.linting.flake8Enabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&quot;python.linting.mypyEnabled&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&quot;python.linting.pylintEnabled&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+    <span class="nt">&quot;editor.formatOnSave&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&quot;python.linting.mypyArgs&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;--strict&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--namespace-packages&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--show-column-numbers&quot;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="nt">&quot;python.sortImports.path&quot;</span><span class="p">:</span> <span class="s2">&quot;isort&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;python.analysis.useLibraryCodeForTypes&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+    <span class="nt">&quot;python.analysis.autoImportCompletions&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+    <span class="nt">&quot;files.eol&quot;</span><span class="p">:</span> <span class="s2">&quot;\n&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="emacs">
+<h3>Emacs<a class="headerlink" href="#emacs" title="Permalink to this headline">¶</a></h3>
+<p>I recommend using the <a class="reference external" href="https://github.com/jorgenschaefer/pyvenv">pyvenv</a> package to have Emacs automatically use the
+correct Python venv (setup by Poetry), and the <a class="reference external" href="https://github.com/joaotavora/eglot">eglot</a> package to provide LSP
+support. The below expects you already have an <code class="docutils literal notranslate"><span class="pre">init.el</span></code> with <a class="reference external" href="https://github.com/jwiegley/use-package">use-package</a>.</p>
+<div class="highlight-emacs-lisp notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="nb">use-package</span> <span class="nv">pyvenv</span>
+  <span class="nb">:ensure</span> <span class="no">t</span>
+  <span class="nb">:hook</span> <span class="p">(</span><span class="nv">python-mode</span> <span class="o">.</span> <span class="nv">pyvenv-tracking-mode</span><span class="p">))</span>
+
+<span class="p">(</span><span class="nb">use-package</span> <span class="nv">eglot</span>
+  <span class="nb">:hook</span>
+  <span class="p">(</span><span class="nv">python-mode</span> <span class="o">.</span> <span class="nv">eglot-ensure</span><span class="p">)</span>
+  <span class="p">(</span><span class="nv">yaml-mode</span> <span class="o">.</span> <span class="nv">eglot-ensure</span><span class="p">)</span>
+  <span class="nb">:custom</span>
+  <span class="p">(</span><span class="nv">eglot-auto-display-help-buffer</span> <span class="no">t</span><span class="p">)</span>
+  <span class="p">(</span><span class="nv">eglot-autoshutdown</span> <span class="no">t</span><span class="p">)</span>
+  <span class="p">(</span><span class="nv">eglot-confirm-server-initiated-edits</span> <span class="no">nil</span><span class="p">)</span>
+  <span class="nb">:config</span>
+  <span class="p">(</span><span class="nv">add-to-list</span> <span class="ss">&#39;eglot-server-programs</span> <span class="o">&#39;</span><span class="p">(</span><span class="nv">yaml-mode</span> <span class="o">.</span> <span class="p">(</span><span class="s">&quot;yaml-language-server&quot;</span> <span class="s">&quot;--stdio&quot;</span><span class="p">)))</span>
+  <span class="p">(</span><span class="nb">defun</span> <span class="nv">eglot-format-buffer-on-save</span> <span class="p">()</span>
+    <span class="p">(</span><span class="k">if</span> <span class="p">(</span><span class="k">and</span> <span class="p">(</span><span class="nv">project-current</span><span class="p">)</span> <span class="p">(</span><span class="nv">eglot-managed-p</span><span class="p">))</span>
+        <span class="p">(</span><span class="nv">add-hook</span> <span class="ss">&#39;before-save-hook</span> <span class="nf">#&#39;</span><span class="nv">eglot-format-buffer</span> <span class="no">nil</span> <span class="ss">&#39;local</span><span class="p">)</span>
+      <span class="p">(</span><span class="nv">remove-hook</span> <span class="ss">&#39;before-save-hook</span> <span class="nf">#&#39;</span><span class="nv">eglot-format-buffer</span> <span class="ss">&#39;local</span><span class="p">)))</span>
+  <span class="p">(</span><span class="nv">add-hook</span> <span class="ss">&#39;eglot-managed-mode-hook</span> <span class="nf">#&#39;</span><span class="nv">eglot-format-buffer-on-save</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Then run <code class="docutils literal notranslate"><span class="pre">M-x</span> <span class="pre">add-dir-local-variable</span> <span class="pre">RET</span> <span class="pre">python-mode</span> <span class="pre">RET</span> <span class="pre">pyvenv-activate</span> <span class="pre">RET</span> <span class="pre">&lt;path/to/virtualenv&gt;</span></code> where the value is the path given by the command above.
+This will create a <code class="docutils literal notranslate"><span class="pre">.dir-locals.el</span></code> with this variable set for Python.</p>
+<p>Refer to this <code class="docutils literal notranslate"><span class="pre">.dir-locals.el</span></code> for a complete setup:</p>
+<div class="highlight-emacs-lisp notranslate"><div class="highlight"><pre><span></span><span class="c1">;;; Directory Local Variables</span>
+<span class="c1">;;; For more information see (info &quot;(emacs) Directory Variables&quot;)</span>
+
+<span class="p">((</span><span class="nv">python-mode</span>
+  <span class="o">.</span> <span class="p">((</span><span class="nv">eglot-workspace-configuration</span> <span class="c1">; an LSP implementation</span>
+      <span class="c1">;; Use `flake8’ instead of the default, and disable noisy plugins.</span>
+      <span class="o">.</span> <span class="p">((</span><span class="nb">:pyls</span> <span class="o">.</span> <span class="p">(</span><span class="nb">:configurationSources</span> <span class="p">[</span><span class="s">&quot;flake8&quot;</span><span class="p">]</span> <span class="nb">:plugins</span> <span class="p">(</span><span class="nb">:pycodestyle</span> <span class="p">(</span><span class="nb">:enabled</span> <span class="no">nil</span><span class="p">)</span> <span class="nb">:mccabe</span> <span class="p">(</span><span class="nb">:enabled</span> <span class="no">nil</span><span class="p">))))))))</span>
+ <span class="p">(</span><span class="nv">yaml-mode</span>
+  <span class="o">.</span> <span class="p">((</span><span class="nv">eglot-workspace-configuration</span>
+      <span class="c1">;; Set the `playbooks/schema.json’ as the schema for playbooks.</span>
+      <span class="o">.</span> <span class="p">((</span><span class="nb">:yaml</span> <span class="o">.</span> <span class="p">(</span><span class="nb">:schemas</span> <span class="p">(</span><span class="nb">:playbooks/schema.json</span> <span class="s">&quot;playbooks/*&quot;</span><span class="p">)))))))</span>
+ <span class="c1">;; Set `pyvenv’ to use the given venv for the whole project.</span>
+ <span class="p">(</span><span class="no">nil</span> <span class="o">.</span> <span class="p">((</span><span class="nv">pyvenv-activate</span> <span class="o">.</span> <span class="s">&quot;~/.cache/pypoetry/virtualenvs/&lt;venv name&gt;&quot;</span><span class="p">))))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="type-annotations">
+<h2>Type Annotations<a class="headerlink" href="#type-annotations" title="Permalink to this headline">¶</a></h2>
+<p>We are using <a class="reference external" href="http://mypy-lang.org/">mypy</a> to enforce static type checking of our Python code. This
+may surprise you as Python is not a statically typed language. While dynamic
+typing can be useful, for a complex tool such as LISA it is more likely to
+introduce bugs that are found only at runtime (which the user experiences as a
+crash). For more information on why we (and others) do this, see <a class="reference external" href="https://dropbox.tech/application/our-journey-to-type-checking-4-million-lines-of-python">Dropbox’s
+journey to type checking 4 million lines of Python</a>. <a class="reference external" href="https://www.python.org/dev/peps/pep-0484/">PEP 484</a> and
+<a class="reference external" href="https://www.python.org/dev/peps/pep-0526/">PEP 526</a> (among others) introduced and defined <a class="reference external" href="https://docs.python.org/3/library/typing.html">type hints</a> for the Python
+language. You can probably figuring out the syntax based on the surrounding
+code, but you can also see this <a class="reference external" href="https://kishstats.com/python/2019/01/07/python-type-hinting.html">Intro to Using Python Type Hints</a> and
+mypy’s <a class="reference external" href="https://mypy.readthedocs.io/en/latest/cheat_sheet_py3.html">cheat sheet</a>.</p>
+</div>
+<div class="section" id="python-naming-conventions">
+<h2>Python Naming Conventions<a class="headerlink" href="#python-naming-conventions" title="Permalink to this headline">¶</a></h2>
+<p>Naming conventions are not automatically enforced, so please read the <a class="reference external" href="https://www.python.org/dev/peps/pep-0008/#naming-conventions">naming
+conventions</a>
+section of PEP 8, which describes what each of the different styles means. A
+short summary of the most important parts:</p>
+<ul class="simple">
+<li><p>Modules (and hence files) should have short, all-lowercase names.</p></li>
+<li><p>Class (and exception) names should normally use the <code class="docutils literal notranslate"><span class="pre">CapWords</span></code> convention
+(also known as <code class="docutils literal notranslate"><span class="pre">CamelCase</span></code>).</p></li>
+<li><p>Function and variable names should be lowercase, with words separated by
+underscores as necessary to improve readability (also known as <code class="docutils literal notranslate"><span class="pre">snake_case</span></code>).</p></li>
+<li><p>To avoid collisions with the standard library, an underscore can be appended,
+such as <code class="docutils literal notranslate"><span class="pre">id_</span></code>.</p></li>
+<li><p>Always use <code class="docutils literal notranslate"><span class="pre">self</span></code> for the first argument to instance methods.</p></li>
+<li><p>Always use <code class="docutils literal notranslate"><span class="pre">cls</span></code> for the first argument to class methods.</p></li>
+<li><p>Use one leading underscore only for non-public methods and instance variables,
+such as <code class="docutils literal notranslate"><span class="pre">_data</span></code>. Do not activate name mangling with <code class="docutils literal notranslate"><span class="pre">__</span></code> unless necessary.</p></li>
+<li><p>If there is a pair of <code class="docutils literal notranslate"><span class="pre">get_x</span></code> and <code class="docutils literal notranslate"><span class="pre">set_x</span></code> methods, they should instead be a
+proper property, which is easy to do with the built-in <code class="docutils literal notranslate"><span class="pre">&#64;property</span></code> decorator.</p></li>
+<li><p>Constants should be <code class="docutils literal notranslate"><span class="pre">CAPITALIZED_SNAKE_CASE</span></code>.</p></li>
+<li><p>When importing a function, try to avoid renaming it with <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">as</span></code> because
+it introduces cognitive overhead to track yet another name.</p></li>
+</ul>
+<p>When in doubt, adhere to existing conventions, or check the style guide.</p>
+</div>
+<div class="section" id="committing-guidelines">
+<h2>Committing Guidelines<a class="headerlink" href="#committing-guidelines" title="Permalink to this headline">¶</a></h2>
+<p>A best practice when using <a class="reference external" href="https://git-scm.com/book/en/v2">Git</a> is to create a
+series of independent and well-documented commits. Each commit should “do one
+thing” and do it correctly. If a mistake is made (you need to fix a bug or
+adjust formatting), you should amend it (or use an <a class="reference external" href="https://thoughtbot.com/blog/git-interactive-rebase-squash-amend-rewriting-history">interactive
+rebase</a>
+to edit it). If you’re using Emacs, the <a class="reference external" href="https://magit.vc/">Magit</a> package makes
+all of this easy. Some of the reasons for making each commit polished is that it
+aids immensely in future debugging. It lets us use tools like <a class="reference external" href="https://git-scm.com/docs/git-bisect"><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">bisect</span></code></a> to automatically find bugs, and
+understand why prior code was written. Although some of it has gone out of date,
+see this otherwise great essay on <a class="reference external" href="http://sethrobertson.github.io/GitBestPractices/">Git best
+practices</a>. For how Git works,
+read <a class="reference external" href="https://jwiegley.github.io/git-from-the-bottom-up/">Git from the Bottom
+Up</a>.</p>
+<p>For writing your commit messages, see this modification of <a class="reference external" href="https://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html">Tim Pope’s
+example</a>:</p>
+<blockquote>
+<div><p>Capitalized, short (72 chars or less) summary</p>
+<p>More detailed explanatory text, if necessary. Wrap it to about 72
+characters or so. In some contexts, the first line is treated as the
+subject of an email and the rest of the text as the body. The blank line
+separating the summary from the body is critical (unless you omit the
+body entirely); tools like rebase can get confused if you run the two
+together.</p>
+<p>Write your commit message in the imperative: “Fix bug” and not “Fixed
+bug” or “Fixes bug.” This convention matches up with commit messages
+generated by commands like git merge and git revert.</p>
+<p>Further paragraphs come after blank lines.</p>
+<ul class="simple">
+<li><p>Bullet points are okay, too</p></li>
+<li><p>Typically a hyphen or asterisk is used for the bullet, followed by a
+single space, with blank lines in between, but conventions vary here</p></li>
+<li><p>Use a hanging indent</p></li>
+</ul>
+</div></blockquote>
+<p>You should also feel free to use Markdown in the commit messages, as our project
+is hosted on GitHub which renders it (and Markdown is human readable).</p>
+</div>
+<div class="section" id="design-patterns">
+<h2>Design Patterns<a class="headerlink" href="#design-patterns" title="Permalink to this headline">¶</a></h2>
+<p>The most important goal we are attempting to accomplish with LISAv3 is for it to
+be “simple, clean, and with a low maintenance cost.”</p>
+<p>We should use caution when using Object Oriented Design, because when it is used
+without critical analysis, it creates unmaintainable code. A great talk on this
+subject is <a class="reference external" href="https://www.youtube.com/watch?v=o9pEzgHorH0">Stop Writing Classes</a>,
+by Jack Diederich. As he says, “classes are great but they are also overused.”</p>
+<p>This <a class="reference external" href="https://python-patterns.guide/">Python Design Patterns</a> is a fantastic
+collection of material for writing maintainable Python code. It specifically
+details many of the common “Object Oriented” patterns from the Gang of Four book
+(which, in fact, were patterns geared toward languages like C++, and no longer
+apply to modern languages like Python), what lessons can be learned from them,
+and how to apply them (or their modern alternatives) today. It also serves as an
+easy-to-read guide to the Gang of Four book itself, as its principles still
+serve us well today.</p>
+<p>Every time a developer chooses to use a design pattern, that person needs to
+reason through and document why it was chosen, and what alternatives were
+considered. We will recreate the problems with LISAv2 unless we take our time to
+carefully create a well-designed and maintainable framework.</p>
+<p>Several popular patterns that actually <em>do not</em> work well in Python are:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://python-patterns.guide/gang-of-four/abstract-factory/">The Abstract Factory Pattern</a></p></li>
+<li><p><a class="reference external" href="https://python-patterns.guide/gang-of-four/factory-method/">The Factory Method Pattern</a></p></li>
+<li><p><a class="reference external" href="https://python-patterns.guide/gang-of-four/prototype/">The Prototype Pattern</a></p></li>
+<li><p><a class="reference external" href="https://python-patterns.guide/gang-of-four/singleton/">The Singleton Pattern</a></p></li>
+</ul>
+<p>Conversely, patterns that are a natural fit to Python include:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://python-patterns.guide/gang-of-four/composite/">The Composite Pattern</a></p></li>
+<li><p><a class="reference external" href="https://python-patterns.guide/gang-of-four/iterator/">The Iterator Pattern</a>
+(caution: it is actually better to implement these with <code class="docutils literal notranslate"><span class="pre">yield</span></code>!)</p></li>
+</ul>
+<p>Finally, a high-level guide to all things Python is <a class="reference external" href="https://docs.python-guide.org/">The Hitchhiker’s Guide to
+Python</a>. It covers just about everything in the
+Python world. If you make it through even some of these guides, you will be well
+on your way to being a “Pythonista” (a Python developer) writing “Pythonic”
+(canonically correct Python) code left and right.</p>
+</div>
+<div class="section" id="generating-documentation">
+<h2>Generating Documentation<a class="headerlink" href="#generating-documentation" title="Permalink to this headline">¶</a></h2>
+<p>We use <a class="reference external" href="https://www.sphinx-doc.org/en/master/index.html">Sphinx</a> to generate our
+<a class="reference external" href="https://microsoft.github.io/lisa/">documentation</a>. To build it locally (and
+check all the links), use:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sphinx-build -b linkcheck . _build
+</pre></div>
+</div>
+</div>
+<div class="section" id="publishing-packages">
+<h2>Publishing Packages<a class="headerlink" href="#publishing-packages" title="Permalink to this headline">¶</a></h2>
+<p>Setup <a class="reference external" href="https://pypi.org/">PyPI</a> with Poetry’s
+<a class="reference external" href="https://python-poetry.org/docs/repositories/">repositories</a>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>poetry config pypi-token.pypi my-token
+</pre></div>
+</div>
+<p>Then for each package, build and publish it! Don’t forget to increment the
+version number afterwards. You should carefully test the package on the <a class="reference external" href="https://test.pypi.org/">Test
+PyPI</a> instance first, as you cannot overwrite uploaded
+packages. You can also bump the patch version if you made a small mistake.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>poetry publish --build
+</pre></div>
+</div>
+</div>
+<div class="section" id="future-sections">
+<h2>Future Sections<a class="headerlink" href="#future-sections" title="Permalink to this headline">¶</a></h2>
+<p>Just a collection of reminders for the author to expand on later.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/doctest.html">doctest</a></p></li>
+<li><p><a class="reference external" href="https://pymotw.com/3/subprocess/index.html">subprocess</a></p></li>
+<li><p><a class="reference external" href="https://github.com/LIS/LISAv2/actions">GitHub Actions</a></p></li>
+<li><p><a class="reference external" href="https://www.shellcheck.net/">ShellCheck</a></p></li>
+<li><p><a class="reference external" href="https://opensource.guide/leadership-and-governance/">Governance</a></p></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">LISA</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="USAGE.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="DESIGN.html">Design</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Contributing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pytest">Pytest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#yaml-schema">YAML Schema</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#poetry">Poetry</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#metadata">Metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#package-dependencies">Package Dependencies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#developer-dependencies">Developer Dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#editor-setup">Editor Setup</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#visual-studio-code">Visual Studio Code</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#emacs">Emacs</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#type-annotations">Type Annotations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#python-naming-conventions">Python Naming Conventions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#committing-guidelines">Committing Guidelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#design-patterns">Design Patterns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#generating-documentation">Generating Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#publishing-packages">Publishing Packages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#future-sections">Future Sections</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="CODE_OF_CONDUCT.html">Code of Conduct</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules/lisa.html">lisa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/target.html">target</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/playbook.html">playbook</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="DESIGN.html" title="previous chapter">Technical Specification Document</a></li>
+      <li>Next: <a href="CODE_OF_CONDUCT.html" title="next chapter">Microsoft Open Source Code of Conduct</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Microsoft Corporation.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/CONTRIBUTING.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

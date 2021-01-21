@@ -1,0 +1,227 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>target.azure &#8212; LISA 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="target.plugin" href="target.plugin.html" />
+    <link rel="prev" title="target" href="target.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-target.azure">
+<span id="target-azure"></span><h1>target.azure<a class="headerlink" href="#module-target.azure" title="Permalink to this headline">¶</a></h1>
+<p>Provides an <code class="docutils literal notranslate"><span class="pre">Azure(Target)</span></code> implementation using the Azure CLI.</p>
+<p class="rubric">Classes</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#target.azure.AzureCLI" title="target.azure.AzureCLI"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AzureCLI</span></code></a>(group, params, Any], features, …)</p></td>
+<td><p>Implements Azure-specific target methods.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt id="target.azure.AzureCLI">
+<em class="property">class </em><code class="sig-prename descclassname">target.azure.</code><code class="sig-name descname">AzureCLI</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">group</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">params</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">features</span><span class="p">:</span> <span class="n">List<span class="p">[</span>str<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">data</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">number</span><span class="p">:</span> <span class="n">int</span> <span class="o">=</span> <span class="default_value">0</span></em>, <em class="sig-param"><span class="n">locked</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/azure.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/azure.html#AzureCLI"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.azure.AzureCLI" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="target.target.html#target.target.Target" title="target.target.Target"><code class="xref py py-class docutils literal notranslate"><span class="pre">target.target.Target</span></code></a></p>
+<p>Implements Azure-specific target methods.</p>
+<p>This implementation uses the Azure CLI <cite>az</cite> to automate creating
+VMs based on the given parameters.</p>
+<dl class="py attribute">
+<dt id="target.azure.AzureCLI.internal_address">
+<code class="sig-name descname">internal_address</code><em class="property">: str</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/azure.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.azure.AzureCLI.internal_address" title="Permalink to this definition">¶</a></dt>
+<dd><p>Internal IP address of this target.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.azure.AzureCLI.schema">
+<em class="property">classmethod </em><code class="sig-name descname">schema</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/azure.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/azure.html#AzureCLI.schema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.azure.AzureCLI.schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Must return a mapping for expected instance parameters.</p>
+<p>The items in this mapping are added to the playbook schema, so
+they may contain objects from the <a class="reference external" href="https://github.com/keleshev/schema">schema</a> library. Each
+target in the playbook will have <code class="docutils literal notranslate"><span class="pre">name</span></code> and <code class="docutils literal notranslate"><span class="pre">platform</span></code>
+keys in addition to those specified here (they’re merged).
+Parameters should generally be <code class="docutils literal notranslate"><span class="pre">schema.Optional</span></code>. If the
+parameter should have a shared but mutable default value, set
+it in <code class="docutils literal notranslate"><span class="pre">defaults</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.azure.AzureCLI.defaults">
+<em class="property">classmethod </em><code class="sig-name descname">defaults</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/azure.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/azure.html#AzureCLI.defaults"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.azure.AzureCLI.defaults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Can return a mapping for default parameters.</p>
+<p>If specified, it must contain only <code class="docutils literal notranslate"><span class="pre">schema.Optional</span></code>
+elements, where the names and types match those in
+<a class="reference internal" href="#target.azure.AzureCLI.schema" title="target.azure.AzureCLI.schema"><code class="xref py py-meth docutils literal notranslate"><span class="pre">schema()</span></code></a>, but with a set default value, and those in
+<a class="reference internal" href="#target.azure.AzureCLI.schema" title="target.azure.AzureCLI.schema"><code class="xref py py-meth docutils literal notranslate"><span class="pre">schema()</span></code></a> should not contain default values. This is
+used a base for each target.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.azure.AzureCLI.check_az_cli">
+<em class="property">classmethod </em><code class="sig-name descname">check_az_cli</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/azure.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/azure.html#AzureCLI.check_az_cli"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.azure.AzureCLI.check_az_cli" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assert that the <cite>az</cite> CLI is installed and logged in.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.azure.AzureCLI.create_boot_storage">
+<code class="sig-name descname">create_boot_storage</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">location</span><span class="p">:</span> <span class="n">str</span></em><span class="sig-paren">)</span> &#x2192; str<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/azure.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/azure.html#AzureCLI.create_boot_storage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.azure.AzureCLI.create_boot_storage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a separate resource group and storage account for boot diagnostics.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.azure.AzureCLI.allow_ping">
+<code class="sig-name descname">allow_ping</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/azure.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/azure.html#AzureCLI.allow_ping"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.azure.AzureCLI.allow_ping" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create NSG rules to enable ICMP ping.</p>
+<p>ICMP ping is disallowed by the Azure load balancer by default, but
+there’s strong debate about if this is necessary, and our tests
+like to check if the host is up using ping, so we create inbound
+and outbound rules in the VM’s network security group to allow it.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.azure.AzureCLI.parse_data">
+<code class="sig-name descname">parse_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; str<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/azure.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/azure.html#AzureCLI.parse_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.azure.AzureCLI.parse_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="target.azure.AzureCLI.deploy">
+<code class="sig-name descname">deploy</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; str<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/azure.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/azure.html#AzureCLI.deploy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.azure.AzureCLI.deploy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given deployment info, deploy a new VM.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.azure.AzureCLI.delete">
+<code class="sig-name descname">delete</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/azure.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/azure.html#AzureCLI.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.azure.AzureCLI.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete the entire allocated resource group.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.azure.AzureCLI.get_boot_diagnostics">
+<code class="sig-name descname">get_boot_diagnostics</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span></em><span class="sig-paren">)</span> &#x2192; Result<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/azure.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/azure.html#AzureCLI.get_boot_diagnostics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.azure.AzureCLI.get_boot_diagnostics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the serial console logs.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.azure.AzureCLI.platform_restart">
+<code class="sig-name descname">platform_restart</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; invoke.runners.Result<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/azure.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/azure.html#AzureCLI.platform_restart"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.azure.AzureCLI.platform_restart" title="Permalink to this definition">¶</a></dt>
+<dd><p>Should this use <cite>–force</cite> and redeploy?</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">LISA</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../USAGE.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../DESIGN.html">Design</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lisa.html">lisa</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="target.html">target</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">target.azure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="target.plugin.html">target.plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="target.target.html">target.target</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="playbook.html">playbook</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="target.html">target</a><ul>
+      <li>Previous: <a href="target.html" title="previous chapter">target</a></li>
+      <li>Next: <a href="target.plugin.html" title="next chapter">target.plugin</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Microsoft Corporation.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/modules/target.azure.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

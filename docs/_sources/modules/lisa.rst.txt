@@ -1,0 +1,40 @@
+﻿lisa
+====
+
+.. automodule:: lisa
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      main
+      pytest_collection_modifyitems
+      pytest_configure
+      pytest_playbook_schema
+      pytest_xdist_make_scheduler
+      validate_mark
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      LISAScheduling
+   
+   
+
+   
+   
+   
+
+
+

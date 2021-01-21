@@ -1,0 +1,453 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>target.plugin &#8212; LISA 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for target.plugin</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) Microsoft Corporation.</span>
+<span class="c1"># Licensed under the MIT License.</span>
+<span class="sd">&quot;&quot;&quot;Provides and parameterizes the :py:func:`.target` fixture(s).</span>
+
+<span class="sd">.. TODO::</span>
+
+<span class="sd">   * Deallocate targets when switching to a new target.</span>
+<span class="sd">   * Use richer feature/requirements comparison for targets.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">typing</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">uuid</span> <span class="kn">import</span> <span class="n">uuid4</span>
+
+<span class="kn">import</span> <span class="nn">playbook</span>
+<span class="kn">import</span> <span class="nn">pytest</span>
+<span class="kn">from</span> <span class="nn">filelock</span> <span class="kn">import</span> <span class="n">FileLock</span>  <span class="c1"># type: ignore</span>
+
+<span class="c1"># See https://pypi.org/project/schema/</span>
+<span class="kn">from</span> <span class="nn">schema</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Or</span><span class="p">,</span> <span class="n">Schema</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">target.target</span> <span class="kn">import</span> <span class="n">SSH</span><span class="p">,</span> <span class="n">Target</span><span class="p">,</span> <span class="n">TargetData</span>
+
+<span class="k">if</span> <span class="n">typing</span><span class="o">.</span><span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">List</span>
+
+    <span class="kn">from</span> <span class="nn">_pytest.config</span> <span class="kn">import</span> <span class="n">Config</span>
+    <span class="kn">from</span> <span class="nn">_pytest.config.argparsing</span> <span class="kn">import</span> <span class="n">Parser</span>
+    <span class="kn">from</span> <span class="nn">_pytest.fixtures</span> <span class="kn">import</span> <span class="n">SubRequest</span>
+    <span class="kn">from</span> <span class="nn">_pytest.mark.structures</span> <span class="kn">import</span> <span class="n">Mark</span>
+    <span class="kn">from</span> <span class="nn">_pytest.python</span> <span class="kn">import</span> <span class="n">Metafunc</span>
+    <span class="kn">from</span> <span class="nn">pytest</span> <span class="kn">import</span> <span class="n">Session</span>
+
+
+<div class="viewcode-block" id="pytest_addoption"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.pytest_addoption">[docs]</a><span class="k">def</span> <span class="nf">pytest_addoption</span><span class="p">(</span><span class="n">parser</span><span class="p">:</span> <span class="n">Parser</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Pytest `addoption hook`_ to add our CLI options.</span>
+
+<span class="sd">    .. _addoption hook: https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_addoption</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">group</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">getgroup</span><span class="p">(</span><span class="s2">&quot;target&quot;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">addoption</span><span class="p">(</span>
+        <span class="s2">&quot;--keep-targets&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Keeps targets between runs.&quot;</span>
+    <span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">addoption</span><span class="p">(</span>
+        <span class="s2">&quot;--delete-targets&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Deletes all cached targets.&quot;</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="pytest_playbook_schema"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.pytest_playbook_schema">[docs]</a><span class="k">def</span> <span class="nf">pytest_playbook_schema</span><span class="p">(</span><span class="n">schema</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;:py:mod:`playbook` hook to update the playbook schema.</span>
+
+<span class="sd">    This adds ``platforms`` and ``targets`` keys to the playbook</span>
+<span class="sd">    schema, with their nested schemata accumulated from each</span>
+<span class="sd">    platform&#39;s implementations of</span>
+<span class="sd">    :py:meth:`~target.target.Target.defaults` and</span>
+<span class="sd">    :py:meth:`~target.target.Target.schema`. We do this by iterating</span>
+<span class="sd">    over the subclasses of :py:class:`~target.target.Target`, a handy</span>
+<span class="sd">    feature of Python that lets us automatically discover users&#39;</span>
+<span class="sd">    implementations, even if they&#39;re defined in a local</span>
+<span class="sd">    ``conftest.py`` Pytest configuration file.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">classes</span> <span class="o">=</span> <span class="n">Target</span><span class="o">.</span><span class="n">__subclasses__</span><span class="p">()</span>
+
+    <span class="c1"># The platforms schema is a set of optional mappings of each</span>
+    <span class="c1"># platform’s name to defaults for its provided schema.</span>
+    <span class="n">platforms_schema</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">get_defaults</span><span class="p">()</span> <span class="k">for</span> <span class="bp">cls</span> <span class="ow">in</span> <span class="n">classes</span><span class="p">)</span>
+    <span class="n">default_platforms</span> <span class="o">=</span> <span class="n">Schema</span><span class="p">(</span><span class="n">platforms_schema</span><span class="p">)</span><span class="o">.</span><span class="n">validate</span><span class="p">({})</span>
+    <span class="n">schema</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="n">Optional</span><span class="p">(</span>
+                <span class="s2">&quot;platforms&quot;</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="n">default_platforms</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A set of objects with default values for each platform.&quot;</span><span class="p">,</span>
+            <span class="p">):</span> <span class="n">platforms_schema</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+
+    <span class="c1"># The targets schema is a list of ‘any of’ the platforms’</span>
+    <span class="c1"># reference schemata.</span>
+    <span class="n">targets_schema</span> <span class="o">=</span> <span class="p">[</span><span class="n">Or</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">get_schema</span><span class="p">()</span> <span class="k">for</span> <span class="bp">cls</span> <span class="ow">in</span> <span class="n">classes</span><span class="p">))]</span>
+    <span class="n">default_target</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Default&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;platform&quot;</span><span class="p">:</span> <span class="s2">&quot;SSH&quot;</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">Schema</span><span class="p">(</span><span class="n">SSH</span><span class="o">.</span><span class="n">schema</span><span class="p">())</span><span class="o">.</span><span class="n">validate</span><span class="p">({}),</span>  <span class="c1"># Fill in the defaults</span>
+    <span class="p">}</span>
+    <span class="n">schema</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="n">Optional</span><span class="p">(</span>
+                <span class="s2">&quot;targets&quot;</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="n">default_target</span><span class="p">],</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A list of targets with which to parameterize the tests.&quot;</span><span class="p">,</span>
+            <span class="p">):</span> <span class="n">targets_schema</span>
+        <span class="p">}</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="target_pool"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.target_pool">[docs]</a><span class="nd">@contextmanager</span>
+<span class="k">def</span> <span class="nf">target_pool</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;Exclusive access to the cached targets pool.</span>
+
+<span class="sd">    This handles access to the Pytest cache of serialized targets. The</span>
+<span class="sd">    cache is a dict of ``{target.name: target.to_json()}``. We use a</span>
+<span class="sd">    file lock to provide exclusive access even if Pytest is being run</span>
+<span class="sd">    in parallel with `pytest-xdist`_. Entries have a ``locked``</span>
+<span class="sd">    property and must only be modified during a session when locked by</span>
+<span class="sd">    that session. Locking means setting ``locked`` to ``True`` and</span>
+<span class="sd">    updating the entry before exiting this context manager.</span>
+
+<span class="sd">    .. _pytest-xdist: https://github.com/pytest-dev/pytest-xdist</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># TODO: Handle edge case where cache plugin is disabled.</span>
+    <span class="k">assert</span> <span class="n">config</span><span class="o">.</span><span class="n">cache</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="n">lock</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">makedir</span><span class="p">(</span><span class="s2">&quot;target&quot;</span><span class="p">))</span> <span class="o">/</span> <span class="s2">&quot;pool.lock&quot;</span>
+    <span class="k">with</span> <span class="n">FileLock</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">lock</span><span class="p">)):</span>
+        <span class="n">pool</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;target/pool&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">yield</span> <span class="n">pool</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;target/pool&quot;</span><span class="p">,</span> <span class="n">pool</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="delete_targets"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.delete_targets">[docs]</a><span class="k">def</span> <span class="nf">delete_targets</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Deletes all cached targets.&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">target_pool</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">json</span> <span class="ow">in</span> <span class="n">pool</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">Target</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">json</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to delete &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="pytest_configure"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.pytest_configure">[docs]</a><span class="k">def</span> <span class="nf">pytest_configure</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Pytest `configure hook`_ to perform initial configuration.</span>
+
+<span class="sd">    .. _configure hook: https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_configure</span>
+
+<span class="sd">    We&#39;re registering our custom marker so that it passes</span>
+<span class="sd">    ``--strict-markers``.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">addinivalue_line</span><span class="p">(</span>
+        <span class="s2">&quot;markers&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;target(platform, features, reuse, count): Specify target requirements.&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">getoption</span><span class="p">(</span><span class="s2">&quot;delete_targets&quot;</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Deleting all cached targets!&quot;</span><span class="p">)</span>
+        <span class="n">delete_targets</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="n">pytest</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s2">&quot;Deleted all cached targets!&quot;</span><span class="p">,</span> <span class="n">pytest</span><span class="o">.</span><span class="n">ExitCode</span><span class="o">.</span><span class="n">OK</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="pytest_unconfigure"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.pytest_unconfigure">[docs]</a><span class="k">def</span> <span class="nf">pytest_unconfigure</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Pytest `unconfigure hook`_ to perform teardown.</span>
+
+<span class="sd">    .. _unconfigure hook: https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_unconfigure</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">getoption</span><span class="p">(</span><span class="s2">&quot;keep_targets&quot;</span><span class="p">):</span>
+        <span class="c1"># TODO: Ignore `--help` or other times tests weren’t run.</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Deleting targets! Pass `--keep-targets` to prevent this.&quot;</span><span class="p">)</span>
+        <span class="n">delete_targets</span><span class="p">(</span><span class="n">config</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_target"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.get_target">[docs]</a><span class="k">def</span> <span class="nf">get_target</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Target</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Common case of getting one ``Target``.&quot;&quot;&quot;</span>
+    <span class="n">marker</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">get_closest_marker</span><span class="p">(</span><span class="s2">&quot;target&quot;</span><span class="p">)</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="n">marker</span><span class="o">.</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;count&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">count</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Use `targets` fixture with `count` instead!&quot;</span>
+    <span class="k">return</span> <span class="n">get_targets</span><span class="p">(</span><span class="n">request</span><span class="p">)</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="get_targets"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.get_targets">[docs]</a><span class="k">def</span> <span class="nf">get_targets</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Target</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;This function gets or creates N ``Target`` instances.</span>
+
+<span class="sd">    1. Unpack request into params, required features, and count</span>
+<span class="sd">    2. Setup fitness criteria for target(s)</span>
+<span class="sd">    3. Find or create necessary targets</span>
+<span class="sd">    4. Return targets</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">param</span>
+    <span class="n">mark</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mark</span><span class="p">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">get_closest_marker</span><span class="p">(</span><span class="s2">&quot;target&quot;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">mark</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="n">features</span> <span class="o">=</span> <span class="n">mark</span><span class="o">.</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;features&quot;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="n">mark</span><span class="o">.</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;count&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">targets</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Target</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">with</span> <span class="n">target_pool</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+
+        <span class="k">def</span> <span class="nf">fits</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">TargetData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="sd">&quot;&quot;&quot;Checks if a given ``Target`` fits the current search criteria.</span>
+
+<span class="sd">            Converting the cached JSON to a ``TargetData`` instance is</span>
+<span class="sd">            cheap and lets us use typed fields here.</span>
+
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="c1"># TODO: Implement full feature comparison, etc. and not</span>
+            <span class="c1"># just proof-of-concept string set comparison.</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Checking fit of </span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="ow">not</span> <span class="n">t</span><span class="o">.</span><span class="n">locked</span>
+                <span class="ow">and</span> <span class="n">params</span> <span class="o">==</span> <span class="n">t</span><span class="o">.</span><span class="n">params</span>
+                <span class="ow">and</span> <span class="nb">set</span><span class="p">(</span><span class="n">features</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="nb">set</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">features</span><span class="p">)</span>
+                <span class="ow">and</span> <span class="n">count</span> <span class="o">&lt;=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">group</span> <span class="o">==</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;group&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">pool</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+            <span class="p">)</span>
+
+        <span class="c1"># TODO: If `t` is not already in use, deallocate the previous</span>
+        <span class="c1"># target, and ensure the tests have been sorted (and so grouped)</span>
+        <span class="c1"># by their requirements.</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Looking for </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> target(s) which fit: </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">count</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">json</span> <span class="ow">in</span> <span class="n">pool</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">fits</span><span class="p">(</span><span class="n">TargetData</span><span class="p">(</span><span class="o">**</span><span class="n">json</span><span class="p">)):</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found fit target &#39;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&#39;!&quot;</span><span class="p">)</span>
+                    <span class="n">t</span> <span class="o">=</span> <span class="n">Target</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">json</span><span class="p">)</span>
+                    <span class="k">assert</span> <span class="n">name</span> <span class="o">==</span> <span class="n">t</span><span class="o">.</span><span class="n">name</span>  <span class="c1"># Sanity check.</span>
+                    <span class="n">t</span><span class="o">.</span><span class="n">locked</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">pool</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+                    <span class="n">targets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+                    <span class="k">break</span>  <span class="c1"># Continue outer counting loop...</span>
+    <span class="k">if</span> <span class="n">targets</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">targets</span><span class="p">)</span> <span class="o">==</span> <span class="n">count</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">group</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;pytest-</span><span class="si">{</span><span class="n">uuid4</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">count</span><span class="p">):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Instantiating target &#39;</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">Target</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">,</span>
+                    <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">,</span>
+                    <span class="s2">&quot;features&quot;</span><span class="p">:</span> <span class="n">features</span><span class="p">,</span>
+                    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                    <span class="s2">&quot;number&quot;</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span>
+                    <span class="s2">&quot;locked&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+            <span class="k">with</span> <span class="n">target_pool</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+                <span class="n">pool</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+            <span class="n">targets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">targets</span></div>
+
+
+<div class="viewcode-block" id="cleanup_target"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.cleanup_target">[docs]</a><span class="k">def</span> <span class="nf">cleanup_target</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Target</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This is called by fixtures after they&#39;re done with a :py:class:`~target.target.Target`.&quot;&quot;&quot;</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">mark</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mark</span><span class="p">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">get_closest_marker</span><span class="p">(</span><span class="s2">&quot;target&quot;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">mark</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="k">with</span> <span class="n">target_pool</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">mark</span><span class="o">.</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;reuse&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+            <span class="n">t</span><span class="o">.</span><span class="n">locked</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">pool</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Deleting target &#39;</span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">group</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">number</span><span class="si">}</span><span class="s2">&#39;...&quot;</span><span class="p">)</span>
+            <span class="n">t</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+            <span class="k">del</span> <span class="n">pool</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="target"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.target">[docs]</a><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">def</span> <span class="nf">target</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Target</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;This fixture provides a connected :py:class:`~target.target.Target` for each test.</span>
+
+<span class="sd">    It is parametrized indirectly in :py:func:`pytest_generate_tests`.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">get_target</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">t</span>
+    <span class="n">cleanup_target</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">request</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="targets"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.targets">[docs]</a><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">def</span> <span class="nf">targets</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Target</span><span class="p">]]:</span>
+    <span class="sd">&quot;&quot;&quot;This fixture is the same as :py:func:`.target` but gets a ``Target`` list.</span>
+
+<span class="sd">    For example, use ``pytest.mark.target(count=2)`` to get a list of</span>
+<span class="sd">    two targets with the same parameters, in the same group.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ts</span> <span class="o">=</span> <span class="n">get_targets</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">ts</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">ts</span><span class="p">:</span>
+        <span class="n">cleanup_target</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">request</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="c_target"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.c_target">[docs]</a><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">scope</span><span class="o">=</span><span class="s2">&quot;class&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">c_target</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Target</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;This fixture is the same as :py:func:`.target` but shared across a class.&quot;&quot;&quot;</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">get_target</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">t</span>
+    <span class="n">cleanup_target</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">request</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="m_target"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.m_target">[docs]</a><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">scope</span><span class="o">=</span><span class="s2">&quot;module&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">m_target</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">SubRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Target</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;This fixture is the same as :py:func:`.target` but shared across a module.&quot;&quot;&quot;</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">get_target</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">t</span>
+    <span class="n">cleanup_target</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">request</span><span class="p">)</span></div>
+
+
+<span class="n">target_params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+
+<div class="viewcode-block" id="pytest_sessionstart"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.pytest_sessionstart">[docs]</a><span class="k">def</span> <span class="nf">pytest_sessionstart</span><span class="p">(</span><span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Pytest `sessionstart hook`_ to setup the session.</span>
+
+<span class="sd">    .. _sessionstart hook: https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_sessionstart</span>
+
+<span class="sd">    Gather the targets from the playbook.</span>
+
+<span class="sd">    First collect any user supplied defaults from the ``platforms``</span>
+<span class="sd">    key in the playbook, which will default to the given ``defaults``</span>
+<span class="sd">    implemented for each platform. Copy the defaults and then</span>
+<span class="sd">    overwrite with the target&#39;s specific parameters.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">platform_defaults</span> <span class="o">=</span> <span class="n">playbook</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;platforms&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">playbook</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;targets&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">platform_defaults</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;platform&quot;</span><span class="p">],</span> <span class="p">{})</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">target_params</span><span class="p">[</span><span class="s2">&quot;Target=&quot;</span> <span class="o">+</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">params</span></div>
+
+
+<div class="viewcode-block" id="pytest_generate_tests"><a class="viewcode-back" href="../../modules/target.plugin.html#target.plugin.pytest_generate_tests">[docs]</a><span class="k">def</span> <span class="nf">pytest_generate_tests</span><span class="p">(</span><span class="n">metafunc</span><span class="p">:</span> <span class="n">Metafunc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Pytest `generate_tests hook`_ to indirectly parameterize :py:func:`.target`.</span>
+
+<span class="sd">    .. _generate_tests hook: https://docs.pytest.org/en/stable/reference.html#pytest.hookspec.pytest_generate_tests</span>
+
+<span class="sd">    This takes the given targets (probably from the playbook) and</span>
+<span class="sd">    transforms them into parameters for all the tests using the</span>
+<span class="sd">    :py:func:`.target` fixture. Since this hook is run for each test,</span>
+<span class="sd">    so we gather the targets in :py:func:`pytest_sessionstart`.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">target_params</span><span class="p">,</span> <span class="s2">&quot;This should not be empty!&quot;</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="s2">&quot;target&quot;</span><span class="p">,</span> <span class="s2">&quot;targets&quot;</span><span class="p">,</span> <span class="s2">&quot;m_target&quot;</span><span class="p">,</span> <span class="s2">&quot;c_target&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">metafunc</span><span class="o">.</span><span class="n">fixturenames</span><span class="p">:</span>
+            <span class="n">metafunc</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">target_params</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span> <span class="kc">True</span><span class="p">,</span> <span class="n">target_params</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">LISA</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../USAGE.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../DESIGN.html">Design</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../CODE_OF_CONDUCT.html">Code of Conduct</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules/lisa.html">lisa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules/target.html">target</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules/playbook.html">playbook</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Microsoft Corporation.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

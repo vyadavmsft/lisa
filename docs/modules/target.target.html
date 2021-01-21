@@ -1,0 +1,468 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>target.target &#8212; LISA 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="playbook" href="playbook.html" />
+    <link rel="prev" title="target.plugin" href="target.plugin.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-target.target">
+<span id="target-target"></span><h1>target.target<a class="headerlink" href="#module-target.target" title="Permalink to this headline">¶</a></h1>
+<p>Provides the abstract base <a class="reference internal" href="#target.target.Target" title="target.target.Target"><code class="xref py py-class docutils literal notranslate"><span class="pre">Target</span></code></a> class.</p>
+<p>This abstract base class provides the building blocks for any platform
+support that could be required. Users simply define a subclass with
+the abstract methods implemented to deploy or delete the target
+appropriately.</p>
+<p class="rubric">Classes</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#target.target.SSH" title="target.target.SSH"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SSH</span></code></a>(group, params, Any], features, data, …)</p></td>
+<td><p>This platform simply connects to existing targets.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#target.target.Target" title="target.target.Target"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Target</span></code></a>(group, params, Any], features, data, …)</p></td>
+<td><p>This class represents a remote Linux target.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#target.target.TargetData" title="target.target.TargetData"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TargetData</span></code></a>(group, params, str], features, …)</p></td>
+<td><p>This class holds serializable data for a <a class="reference internal" href="#target.target.Target" title="target.target.Target"><code class="xref py py-class docutils literal notranslate"><span class="pre">Target</span></code></a>.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt id="target.target.TargetData">
+<em class="property">class </em><code class="sig-prename descclassname">target.target.</code><code class="sig-name descname">TargetData</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">group</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">params</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>str<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">features</span><span class="p">:</span> <span class="n">List<span class="p">[</span>str<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">data</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">number</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">locked</span><span class="p">:</span> <span class="n">bool</span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#TargetData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.TargetData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>This class holds serializable data for a <a class="reference internal" href="#target.target.Target" title="target.target.Target"><code class="xref py py-class docutils literal notranslate"><span class="pre">Target</span></code></a>.</p>
+<p>This is an internal detail. It is separated out so we can easily
+serialize to and from JSON in order to enable caching. By
+decoupling these we prevent users from having to understand the
+semantics of a <code class="docutils literal notranslate"><span class="pre">dataclass</span></code>, and fields added to subclasses don’t
+interfere with serialization.</p>
+<div class="admonition-todo admonition" id="id1">
+<p class="admonition-title">Todo</p>
+<p>Consider using more from <code class="docutils literal notranslate"><span class="pre">dataclasses</span></code>, such as <code class="docutils literal notranslate"><span class="pre">field()</span></code>
+and <code class="docutils literal notranslate"><span class="pre">__post_init__()</span></code>.</p>
+</div>
+<dl class="py attribute">
+<dt id="target.target.TargetData.group">
+<code class="sig-name descname">group</code><em class="property">: str</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.TargetData.group" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.TargetData.params">
+<code class="sig-name descname">params</code><em class="property">: Dict<span class="p">[</span>str<span class="p">, </span>str<span class="p">]</span></em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.TargetData.params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.TargetData.features">
+<code class="sig-name descname">features</code><em class="property">: List<span class="p">[</span>str<span class="p">]</span></em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.TargetData.features" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.TargetData.data">
+<code class="sig-name descname">data</code><em class="property">: Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.TargetData.data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.TargetData.number">
+<code class="sig-name descname">number</code><em class="property">: int</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.TargetData.number" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.TargetData.locked">
+<code class="sig-name descname">locked</code><em class="property">: bool</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.TargetData.locked" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="target.target.TargetData.to_json">
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Dict<span class="p">[</span>str<span class="p">, </span>Any<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#TargetData.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.TargetData.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a JSON-serializable representation of the <code class="docutils literal notranslate"><span class="pre">Target</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.TargetData.from_json">
+<em class="property">static </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">json</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>Any<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#target.target.Target" title="target.target.Target">Target</a><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#TargetData.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.TargetData.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Instantiates the correct <code class="docutils literal notranslate"><span class="pre">Target</span></code> subclass given the JSON representation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.TargetData.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">group</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">params</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>str<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">features</span><span class="p">:</span> <span class="n">List<span class="p">[</span>str<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">data</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">number</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">locked</span><span class="p">:</span> <span class="n">bool</span></em><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.TargetData.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="target.target.Target">
+<em class="property">class </em><code class="sig-prename descclassname">target.target.</code><code class="sig-name descname">Target</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">group</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">params</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">features</span><span class="p">:</span> <span class="n">List<span class="p">[</span>str<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">data</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">number</span><span class="p">:</span> <span class="n">int</span> <span class="o">=</span> <span class="default_value">0</span></em>, <em class="sig-param"><span class="n">locked</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#Target"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#target.target.TargetData" title="target.target.TargetData"><code class="xref py py-class docutils literal notranslate"><span class="pre">target.target.TargetData</span></code></a></p>
+<p>This class represents a remote Linux target.</p>
+<p>As a partially abstract base class, it is meant to be subclassed
+to provide platform support. So <code class="docutils literal notranslate"><span class="pre">Target</span></code> as a class maps to the
+concept of a Linux target machine reachable via SSH (through
+<a class="reference internal" href="#target.target.Target.conn" title="target.target.Target.conn"><code class="xref py py-attr docutils literal notranslate"><span class="pre">conn</span></code></a>, an instance of <a class="reference external" href="https://docs.fabfile.org/en/stable/api/connection.html">Fabric.Connection</a>). Each
+subclass of <code class="docutils literal notranslate"><span class="pre">Target</span></code> provides the necessary implementation to
+instantiate an actual Linux target, by deploying it on that
+platform. Each _instance_ of a platform-specific subclass of
+<code class="docutils literal notranslate"><span class="pre">Target</span></code> maps to an actual Linux target that has been deployed
+on that platform.</p>
+<dl class="py method">
+<dt id="target.target.Target.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">group</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">params</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">features</span><span class="p">:</span> <span class="n">List<span class="p">[</span>str<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">data</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">number</span><span class="p">:</span> <span class="n">int</span> <span class="o">=</span> <span class="default_value">0</span></em>, <em class="sig-param"><span class="n">locked</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#Target.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and deploys an instance of <a class="reference internal" href="#target.target.Target" title="target.target.Target"><code class="xref py py-class docutils literal notranslate"><span class="pre">Target</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>group</strong> – is a unique ID for the group of associated resources</p></li>
+<li><p><strong>params</strong> – is the input parameters conforming to <cite>schema()</cite></p></li>
+<li><p><strong>features</strong> – is set of arbitrary feature requirements</p></li>
+<li><p><strong>data</strong> – is the cached data for the target</p></li>
+<li><p><strong>number</strong> – is the numerical ID of this target in its group</p></li>
+<li><p><strong>locked</strong> – is the state of the target’s availability</p></li>
+</ul>
+</dd>
+</dl>
+<p>Subclass implementations of <code class="docutils literal notranslate"><span class="pre">Target</span></code> do not need to (and
+should not) override <a class="reference internal" href="#target.target.Target.__init__" title="target.target.Target.__init__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__init__()</span></code></a> as it is setup such
+that all platform-specific setup logic can be encoded in
+<a class="reference internal" href="#target.target.Target.deploy" title="target.target.Target.deploy"><code class="xref py py-meth docutils literal notranslate"><span class="pre">deploy()</span></code></a> instead, which this calls.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.Target.name">
+<code class="sig-name descname">name</code><em class="property">: str</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.Target.host">
+<code class="sig-name descname">host</code><em class="property">: str</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.host" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.Target.conn">
+<code class="sig-name descname">conn</code><em class="property">: fabric.Connection</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.conn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used for SSH access, see <a class="reference external" href="https://docs.fabfile.org/en/stable/api/connection.html">Fabric.Connection</a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.Target.schema">
+<em class="property">abstract classmethod </em><code class="sig-name descname">schema</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Mapping<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#Target.schema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Must return a mapping for expected instance parameters.</p>
+<p>The items in this mapping are added to the playbook schema, so
+they may contain objects from the <a class="reference external" href="https://github.com/keleshev/schema">schema</a> library. Each
+target in the playbook will have <code class="docutils literal notranslate"><span class="pre">name</span></code> and <code class="docutils literal notranslate"><span class="pre">platform</span></code>
+keys in addition to those specified here (they’re merged).
+Parameters should generally be <code class="docutils literal notranslate"><span class="pre">schema.Optional</span></code>. If the
+parameter should have a shared but mutable default value, set
+it in <code class="docutils literal notranslate"><span class="pre">defaults</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.Target.defaults">
+<em class="property">classmethod </em><code class="sig-name descname">defaults</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Mapping<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#Target.defaults"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.defaults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Can return a mapping for default parameters.</p>
+<p>If specified, it must contain only <code class="docutils literal notranslate"><span class="pre">schema.Optional</span></code>
+elements, where the names and types match those in
+<a class="reference internal" href="#target.target.Target.schema" title="target.target.Target.schema"><code class="xref py py-meth docutils literal notranslate"><span class="pre">schema()</span></code></a>, but with a set default value, and those in
+<a class="reference internal" href="#target.target.Target.schema" title="target.target.Target.schema"><code class="xref py py-meth docutils literal notranslate"><span class="pre">schema()</span></code></a> should not contain default values. This is
+used a base for each target.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.Target.deploy">
+<em class="property">abstract </em><code class="sig-name descname">deploy</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; str<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#Target.deploy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.deploy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Must deploy the target resources and return the hostname.</p>
+<p>Subclass implementations can treat this like <code class="docutils literal notranslate"><span class="pre">__init__</span></code> with
+<a class="reference internal" href="#target.target.Target.schema" title="target.target.Target.schema"><code class="xref py py-meth docutils literal notranslate"><span class="pre">schema()</span></code></a> defining the input <code class="docutils literal notranslate"><span class="pre">params</span></code>.</p>
+<p>Data which should be cached must be saved to <code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code>.</p>
+<p>If <code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code> is populated then implementations should
+assume they’re refreshing a cached target.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.Target.delete">
+<em class="property">abstract </em><code class="sig-name descname">delete</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#Target.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Must delete the target’s resources.</p>
+<p>If this is the last target in its group then implementations
+should delete the group resource too.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.Target.get_defaults">
+<em class="property">classmethod </em><code class="sig-name descname">get_defaults</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Tuple<span class="p">[</span>Optional<span class="p">, </span>Schema<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#Target.get_defaults"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.get_defaults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a tuple of “platform key” / “defaults value” pairs.</p>
+<p>This is an internal detail, used when generating the
+playbook’s schema. Subclasses should not override this.</p>
+<p>The key is an optional literal, the name of the subclass for
+the platform, with a default value of the validated
+<a class="reference internal" href="#target.target.Target.defaults" title="target.target.Target.defaults"><code class="xref py py-meth docutils literal notranslate"><span class="pre">defaults()</span></code></a> schema when given no input (hence they
+must all be optional). The value is reference schema
+definition generated from the <a class="reference internal" href="#target.target.Target.defaults" title="target.target.Target.defaults"><code class="xref py py-meth docutils literal notranslate"><span class="pre">defaults()</span></code></a> dict.</p>
+<p>When generating the playbook’s schema all the platforms’
+tuples are mapped into a single dict.</p>
+<div class="admonition-todo admonition" id="id2">
+<p class="admonition-title">Todo</p>
+<p>Assert that the set of key names in each <code class="docutils literal notranslate"><span class="pre">defaults()</span></code> is
+a subset of the key names in the corresponding
+<code class="docutils literal notranslate"><span class="pre">schema()</span></code>.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.Target.get_schema">
+<em class="property">classmethod </em><code class="sig-name descname">get_schema</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; schema.Schema<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#Target.get_schema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.get_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a reference schema definition for the class parameters.</p>
+<p>This is an internal detail, used when generating the
+playbook’s schema. Subclasses should not override this.</p>
+<p>We generate the whole definition by combining the values of
+<a class="reference internal" href="#target.target.Target.schema" title="target.target.Target.schema"><code class="xref py py-meth docutils literal notranslate"><span class="pre">schema()</span></code></a> (which is defined by each platform’s
+implementation) with two required keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: A friendly name for the target.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">platform</span></code>: The name of the subclass for the platform.</p></li>
+</ul>
+<p>When generating the playbook’s schema all the platforms’
+schemata are mapped into an ‘any of’ schema.</p>
+<div class="admonition-todo admonition" id="id3">
+<p class="admonition-title">Todo</p>
+<p>Perhaps elevate ‘name’ to the key, with the nested schema
+as the value.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.Target.get_platform">
+<em class="property">static </em><code class="sig-name descname">get_platform</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">platform</span><span class="p">:</span> <span class="n">str</span></em><span class="sig-paren">)</span> &#x2192; Type<span class="p">[</span><a class="reference internal" href="#target.target.Target" title="target.target.Target">Target</a><span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#Target.get_platform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.get_platform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the <a class="reference internal" href="#target.target.Target" title="target.target.Target"><code class="xref py py-class docutils literal notranslate"><span class="pre">Target</span></code></a> subclass for the named platform.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.Target.local">
+<em class="property">classmethod </em><code class="sig-name descname">local</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span></em><span class="sig-paren">)</span> &#x2192; Result<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#Target.local"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.local" title="Permalink to this definition">¶</a></dt>
+<dd><p>This patches Fabric’s <code class="docutils literal notranslate"><span class="pre">local()</span></code> function to ignore SSH environment.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.Target.ping">
+<code class="sig-name descname">ping</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span></em><span class="sig-paren">)</span> &#x2192; Result<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#Target.ping"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.ping" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ping the node from the local system in a cross-platform manner.</p>
+<p>This is setup such that it retries five times when the exit
+code is nonzero, with an exponential backoff. Since we want to
+return the command’s result regardless of failure, we suppress
+<a class="reference external" href="https://www.pyinvoke.org/">Invoke</a>’s exception with <code class="docutils literal notranslate"><span class="pre">warn=True</span></code> and <a class="reference external" href="https://tenacity.readthedocs.io/en/latest/">Tenacity</a>’s exception
+with <code class="docutils literal notranslate"><span class="pre">retry_error_callback=...</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.Target.cat">
+<code class="sig-name descname">cat</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="p">:</span> <span class="n">str</span></em><span class="sig-paren">)</span> &#x2192; str<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#Target.cat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.Target.cat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the value of a remote file without a temporary file.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="target.target.SSH">
+<em class="property">class </em><code class="sig-prename descclassname">target.target.</code><code class="sig-name descname">SSH</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">group</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">params</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">features</span><span class="p">:</span> <span class="n">List<span class="p">[</span>str<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">data</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">number</span><span class="p">:</span> <span class="n">int</span> <span class="o">=</span> <span class="default_value">0</span></em>, <em class="sig-param"><span class="n">locked</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#SSH"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#target.target.Target" title="target.target.Target"><code class="xref py py-class docutils literal notranslate"><span class="pre">target.target.Target</span></code></a></p>
+<p>This platform simply connects to existing targets.</p>
+<p>It does not deploy nor delete the target. The default <code class="docutils literal notranslate"><span class="pre">host</span></code> is
+<code class="docutils literal notranslate"><span class="pre">localhost</span></code> so this can be used for testing against the user’s
+system (if SSH is enabled).</p>
+<dl class="py method">
+<dt id="target.target.SSH.schema">
+<em class="property">classmethod </em><code class="sig-name descname">schema</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#SSH.schema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a <code class="docutils literal notranslate"><span class="pre">host</span></code> parameter.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.SSH.name">
+<code class="sig-name descname">name</code><em class="property">: str</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.SSH.host">
+<code class="sig-name descname">host</code><em class="property">: str</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.host" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.SSH.conn">
+<code class="sig-name descname">conn</code><em class="property">: fabric.Connection</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.conn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used for SSH access, see <a class="reference external" href="https://docs.fabfile.org/en/stable/api/connection.html">Fabric.Connection</a></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.SSH.group">
+<code class="sig-name descname">group</code><em class="property">: str</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.group" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.SSH.params">
+<code class="sig-name descname">params</code><em class="property">: Dict<span class="p">[</span>str<span class="p">, </span>str<span class="p">]</span></em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.SSH.features">
+<code class="sig-name descname">features</code><em class="property">: List<span class="p">[</span>str<span class="p">]</span></em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.features" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.SSH.data">
+<code class="sig-name descname">data</code><em class="property">: Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span></em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.SSH.number">
+<code class="sig-name descname">number</code><em class="property">: int</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.number" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="target.target.SSH.locked">
+<code class="sig-name descname">locked</code><em class="property">: bool</em><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.locked" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="target.target.SSH.defaults">
+<em class="property">classmethod </em><code class="sig-name descname">defaults</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Dict<span class="p">[</span>Any<span class="p">, </span>Any<span class="p">]</span><a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#SSH.defaults"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.defaults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defaults to <code class="docutils literal notranslate"><span class="pre">localhost</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.SSH.deploy">
+<code class="sig-name descname">deploy</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; str<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#SSH.deploy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.deploy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Must deploy the target resources and return the hostname.</p>
+<p>Subclass implementations can treat this like <code class="docutils literal notranslate"><span class="pre">__init__</span></code> with
+<a class="reference internal" href="#target.target.SSH.schema" title="target.target.SSH.schema"><code class="xref py py-meth docutils literal notranslate"><span class="pre">schema()</span></code></a> defining the input <code class="docutils literal notranslate"><span class="pre">params</span></code>.</p>
+<p>Data which should be cached must be saved to <a class="reference internal" href="#target.target.SSH.data" title="target.target.SSH.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a>.</p>
+<p>If <a class="reference internal" href="#target.target.SSH.data" title="target.target.SSH.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a> is populated then implementations should
+assume they’re refreshing a cached target.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="target.target.SSH.delete">
+<code class="sig-name descname">delete</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="reference external" href="https://github.com/microsoft/lisa/blob/andschwa/pytest/pytest-target/target/target.py"><span class="viewcode-link">[source]</span></a><a class="reference internal" href="../_modules/target/target.html#SSH.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#target.target.SSH.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Must delete the target’s resources.</p>
+<p>If this is the last target in its group then implementations
+should delete the group resource too.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">LISA</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../USAGE.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../DESIGN.html">Design</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CODE_OF_CONDUCT.html">Code of Conduct</a></li>
+</ul>
+<p class="caption"><span class="caption-text">API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lisa.html">lisa</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="target.html">target</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="target.azure.html">target.azure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="target.plugin.html">target.plugin</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">target.target</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="playbook.html">playbook</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="target.html">target</a><ul>
+      <li>Previous: <a href="target.plugin.html" title="previous chapter">target.plugin</a></li>
+      <li>Next: <a href="playbook.html" title="next chapter">playbook</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021 Microsoft Corporation.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/modules/target.target.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
