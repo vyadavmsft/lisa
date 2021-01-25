@@ -354,7 +354,7 @@ sed -i --follow-symlinks "s/console=\S*//g" $boot_filepath
 if [[ $DISTRO != "redhat_8" ]] && [[ $DISTRO != "centos_8" ]]; then
     sed -i --follow-symlinks "/vmlinuz-$(uname -r)/ s/$/ crashkernel=$crashkernel/" $boot_filepath
 else
-    sed -i --follow-symlinks "/kernelopts=root/s/$/ crashkernel=$crashkernel/" $boot_filepath
+    sed -i --follow-symlinks "/root=UUID=/ s/$/ crashkernel=$crashkernel/" $boot_filepath
 fi
 if [ $? -ne 0 ]; then
     LogErr "Could not set the new crashkernel value in $boot_filepath"
