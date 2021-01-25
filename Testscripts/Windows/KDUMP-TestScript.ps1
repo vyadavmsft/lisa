@@ -118,7 +118,7 @@ function Main {
     Run-LinuxCmd -username $VMUserName -password $VMPassword -ip $Ipv4 -port $VMPort `
         -command "sync; reboot" -runAsSudo -RunInBackGround | Out-Null
     Write-LogInfo "Rebooting VM $VMName after kdump configuration..."
-    Start-Sleep -Seconds 10 # Wait for kvp & ssh services stop
+    Start-Sleep -Seconds 120 # Wait for kvp & ssh services stop
 
     # Wait for VM boot up and update ip address
     Wait-ForVMToStartSSH -Ipv4addr $Ipv4 -StepTimeout 360 | Out-Null
