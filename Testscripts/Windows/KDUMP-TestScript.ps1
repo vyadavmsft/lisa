@@ -114,12 +114,12 @@ function Main {
         Write-LogWarn "Distro is not supported or kernel config does not allow auto"
         return "SKIPPED"
     }
-    Start-Sleep -Seconds 600 
+    Start-Sleep -Seconds 60 
     # Rebooting the VM in order to apply the kdump settings
     Run-LinuxCmd -username $VMUserName -password $VMPassword -ip $Ipv4 -port $VMPort `
         -command "sync; reboot" -runAsSudo -RunInBackGround | Out-Null
     Write-LogInfo "Rebooting VM $VMName after kdump configuration..."
-    Start-Sleep -Seconds 120 # Wait for kvp & ssh services stop
+    Start-Sleep -Seconds 60 # Wait for kvp & ssh services stop
 
     # Wait for VM boot up and update ip address
     Wait-ForVMToStartSSH -Ipv4addr $Ipv4 -StepTimeout 360 | Out-Null
