@@ -114,6 +114,7 @@ function Main {
         Write-LogWarn "Distro is not supported or kernel config does not allow auto"
         return "SKIPPED"
     }
+    Start-Sleep -Seconds 600 
     # Rebooting the VM in order to apply the kdump settings
     Run-LinuxCmd -username $VMUserName -password $VMPassword -ip $Ipv4 -port $VMPort `
         -command "sync; reboot" -runAsSudo -RunInBackGround | Out-Null
