@@ -18,6 +18,9 @@ fi
 rm -rf /root/.ssh/id_rsa*
 cd /root
 keyTarFile=sshFix.tar
+sshd_configFilePath="/etc/ssh/sshd_config"
+sed -i 's/.*PermitRootLogin.*/PermitRootLogin yes/g' $sshd_configFilePath
+service sshd restart || systemctl restart sshd.service
 if [ -e "${Custom_Path}/${keyTarFile}" ]; then
     tarPath="${Custom_Path}/${keyTarFile}"
     echo | ssh-keygen -N ''
