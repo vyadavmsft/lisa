@@ -122,7 +122,7 @@ Create1Gfile()
         rm -f "$HOME"/"$output_file"
     fi
 
-    dd if=$file_source of="$HOME"/"$output_file" bs=1 count=0 seek=5G
+    dd if=$file_source of="$HOME"/"$output_file" bs=1 count=0 seek=2G
     if [ 0 -ne $? ]; then
         LogErr "Unable to create file $output_file in $HOME"
         SetTestStateFailed
