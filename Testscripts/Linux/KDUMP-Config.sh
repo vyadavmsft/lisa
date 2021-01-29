@@ -34,24 +34,25 @@ Install_Kexec() {
         ubuntu* | debian*)
             export DEBIAN_FRONTEND=noninteractive
             dpkg_configure
-            apt-get update --fix-missing; apt --fix-broken install -y; apt_get_install "kexec-tools kdump-tools makedumpfile"
+            apt-get update --fix-missing; apt --fix-broken install -y; apt_get_install "linux-crashdump"
+            #"kexec-tools kdump-tools makedumpfile"
             if [ $? -ne 0 ]; then
                 UpdateSummary "Warning: Kexec-tools failed to install."
             fi
             #Existed bug for kexec-tools https://bugs.launchpad.net/ubuntu/+source/kexec-tools/+bug/1713940
-            if [[ "$DISTRO" == "ubuntu_14.04" || "$DISTRO_NAME" == "debian" ]]; then
-                kexec_version=$(kexec --v | awk -F' ' '{print $2}')
-                if version_gt "${target_version}" "${kexec_version}"; then
-                    apt_get_install "make gcc"
-                    wget "https://mirrors.edge.kernel.org/pub/linux/utils/kernel/kexec/kexec-tools-${kexecVersion}.tar.gz"
-                    kexec_tar=$(find -name "kexec-tools*" -type f)
-                    tar xf "${kexec_tar}"
-                    kexec_folder=$(find -name "kexec-tools*" -type d)
-                    pushd "${kexec_folder}" && ./configure && make && make install > /dev/null 2>&1
-                    popd
-                    yes | cp -f /usr/local/sbin/kexec /sbin/
-                fi
-            fi
+            # if [[ "$DISTRO" == "ubuntu_14.04" || "$DISTRO_NAME" == "debian" ]]; then
+            #     kexec_version=$(kexec --v | awk -F' ' '{print $2}')
+            #     if version_gt "${target_version}" "${kexec_version}"; then
+            #         apt_get_install "make gcc"
+            #         wget "https://mirrors.edge.kernel.org/pub/linux/utils/kernel/kexec/kexec-tools-${kexecVersion}.tar.gz"
+            #         kexec_tar=$(find -name "kexec-tools*" -type f)
+            #         tar xf "${kexec_tar}"
+            #         kexec_folder=$(find -name "kexec-tools*" -type d)
+            #         pushd "${kexec_folder}" && ./configure && make && make install > /dev/null 2>&1
+            #         popd
+            #         yes | cp -f /usr/local/sbin/kexec /sbin/
+            #     fi
+            # fi
         ;;
         suse*)
             zypper refresh; zypper_install "kexec-tools kdump makedumpfile"
@@ -348,7 +349,7 @@ Config_"${OS_FAMILY}"
 sed -i --follow-symlinks "s/crashkernel=\S*//g" $boot_filepath
 
 # Remove console params; It could interfere with the testing
-sed -i --follow-symlinks "s/console=\S*//g" $boot_filepath
+#sed -i --follow-symlinks "s/console=\S*//g" $boot_filepath
 
 # Add the crashkernel param
 if [[ $DISTRO != "redhat_8" ]] && [[ $DISTRO != "centos_8" ]]; then
