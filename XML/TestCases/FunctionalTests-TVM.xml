@@ -32,8 +32,8 @@
       <SetupType>OneVM</SetupType>
       <SecureBoot>true</SecureBoot>
       <vTPM>true</vTPM>
-      <SecurityType>TrustedLaunch</SecurityType>
-      <OverrideVMSize>Standard_D2s_v3,=~.*</OverrideVMSize>
+      <ImageType>Specialized</ImageType>
+      <OverrideVMSize>Standard_D2s_v3,=~Standard_D[0-9]+s_v3</OverrideVMSize>
       <VMGeneration>2</VMGeneration>
     </SetupConfig>
   </test>

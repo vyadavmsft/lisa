@@ -74,6 +74,10 @@ Class AzureProvider : TestProvider {
 			}
 			$isVmAlive = Is-VmAlive -AllVMDataObject $allVMData
 			if ($isVmAlive -eq "True") {
+				if ($TestCaseData.SetupConfig.ImageType -eq "Specialized") {
+					PrepareForSpecializedVHD -allVMData $allVMData
+					$this.RestartAllDeployments($allVMData)
+				}
 				if (($this.EnableTelemetry -and !$UseExistingRG)) {
 					$null = Upload-AzureBootAndDeploymentDataToDB -allVMData $allVMData -DeploymentTime $DeploymentElapsedTime.TotalSeconds -CurrentTestData $TestCaseData
 				}

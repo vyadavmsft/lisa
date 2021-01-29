@@ -2607,3 +2607,14 @@ Function ExtractSSHPublicKeyFromPPKFile {
             return $null
         }
 }
+
+Function PrepareForSpecializedVHD($AllVMData) {
+    foreach ($vm in $AllVmData) {
+        Run-LinuxCmd -Username $global:user -password $global:password -ip $vm.PublicIP -Port $vm.SSHPort `
+        -Command "rm -rf /home/$($global:user)/*" -runAsSudo -ignoreLinuxExitCode | out-null
+        Run-LinuxCmd -Username $global:user -password $global:password -ip $vm.PublicIP -Port $vm.SSHPort `
+        -Command "rm -rf /root/*" -runAsSudo -ignoreLinuxExitCode | out-null
+        Run-LinuxCmd -Username $global:user -password $global:password -ip $vm.PublicIP -Port $vm.SSHPort `
+        -Command "echo $($vm.RoleName) > /etc/hostname" -runAsSudo -ignoreLinuxExitCode | out-null
+    }
+}
