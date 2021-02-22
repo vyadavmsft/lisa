@@ -186,7 +186,7 @@ if [ $? ]
 		foreach ($VMData in $AllVMData) {
 			Copy-RemoteFiles -uploadTo $VMData.PublicIP -port $VMData.SSHPort -files "$constantsFile,$($CurrentTestData.files),$LogDir\*.sh" -username $user -password $password -upload
 			Write-LogInfo "Copied the script files to the VM"
-			Run-LinuxCmd -ip $VMData.PublicIP -port $VMData.SSHPort -username $user -password $password -command "bash ./setup.sh" -runAsSudo
+			Run-LinuxCmd -ip $VMData.PublicIP -port $VMData.SSHPort -username $user -password $password -command "bash ./setup.sh" -runAsSudo -ignoreLinuxExitCode:$true | Out-Null
 		}
 		#endregion
 
