@@ -173,7 +173,7 @@ function Main {
     }
 
     # Wait for VM boot up and update ip address
-    Wait-ForVMToStartSSH -Ipv4addr $Ipv4 -StepTimeout 600 | Out-Null
+    Wait-ForVMToStartSSH -Ipv4addr $Ipv4 -StepTimeout 1200 | Out-Null
 
     # Verifying if the kernel panic process creates a vmcore file of size 10M+
     $retVal = Run-LinuxCmd -username $VMUserName -password $VMPassword -ip $Ipv4 -port $VMPort `
