@@ -162,8 +162,6 @@ Config_Rhel() {
         echo "KDUMP_COMMANDLINE_APPEND=\"ata_piix.prefer_ms_hyperv=0 disk_timeout=100 rd.driver.blacklist=hv_vmbus,hv_storvsc,hv_utils,hv_netvsc,hid-hyperv,hyperv_fb\"" >> /etc/sysconfig/kdump
     fi
 
-    GetGuestGeneration
-    # centos 7 gen2 - /boot/efi/EFI/centos/grub.cfg
     distro=$(detect_linux_distribution)
     if [ "$os_GENERATION" -eq 2 ] && [[ $os_RELEASE =~ 6.* ]]; then
         boot_filepath=/boot/efi/EFI/BOOT/bootx64.conf
@@ -174,7 +172,14 @@ Config_Rhel() {
     elif [ "$os_GENERATION" -eq 1 ] && [[ $os_RELEASE =~ 8.* ]]; then
         boot_filepath=/boot/grub2/grubenv
     elif [ "$os_GENERATION" -eq 2 ] && [[ $os_RELEASE =~ 7.* || $os_RELEASE =~ 8.* ]]; then
-        boot_filepath=/boot/efi/EFI/$distro/grub.cfg
+        # centos 7 gen2 - /boot/efi/EFI/centos/grub.cfg
+        # rhel 7 gen2 - /boot/efi/EFI/redhat/grub.cfg
+        if [ "$DISTRO_NAME" -eq "rhel" ]; then
+            boot_filepath=/boot/efi/EFI/redhat/grub.cfg
+        fi
+        if [ "$DISTRO_NAME" -eq "centos" ]; then
+            boot_filepath=/boot/efi/EFI/centos/grub.cfg
+        fi
     else
         boot_filepath=$(find /boot -name grub.cfg)
     fi
