@@ -120,6 +120,7 @@ function InstallDockerEngine() {
                 sed -i -e 's/$releasever/8/g' /etc/yum.repos.d/docker-ce.repo
                 yum install --nogpgcheck -y docker-ce docker-ce-cli containerd.io --nobest --allowerasing
             elif [[ $DISTRO_VERSION == 7* ]];then
+                sed -i -e 's/$releasever/7/g' /etc/yum.repos.d/docker-ce.repo
                 yum install -y http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.107-1.el7_6.noarch.rpm
                 for package in "${pack_list[@]}"; do
                     check_package "$package"
