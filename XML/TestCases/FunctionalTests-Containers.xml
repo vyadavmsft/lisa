@@ -5,7 +5,7 @@
     <files>.\Testscripts\Linux\docker_java_app.sh,.\Testscripts\Linux\utils.sh,.\Testscripts\Linux\containers_utils.sh</files>
     <TestParameters>
     </TestParameters>
-    <Timeout>600</Timeout>
+    <Timeout>1200</Timeout>
     <Platform>Azure</Platform>
     <Category>Functional</Category>
     <Area>CONTAINER</Area>
