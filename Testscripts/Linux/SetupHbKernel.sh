@@ -12,7 +12,7 @@
 }
 # Source constants file and initialize most common variables
 UtilsInit
-
+SetTestStateRunning
 # Constants/Globals
 # Get distro information
 GetDistro

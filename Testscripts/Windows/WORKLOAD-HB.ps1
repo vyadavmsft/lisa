@@ -42,6 +42,7 @@ function Main {
 			$timeout = New-Timespan -Minutes $maxWorkRunWaitMin
 			$sw = [diagnostics.stopwatch]::StartNew()
 			if ($isNetworkWorkloadEnable -eq 1) {
+				Run-LinuxCmd -ip $AllVMData[1].PublicIP -port $AllVMData[1].SSHPort -username $user -password $password -command "command -v iperf3 > /dev/null || source utils.sh && install_iperf3 && stop_firewall" -runAsSudo | Out-Null
 				Run-LinuxCmd -ip $AllVMData[1].PublicIP -port $AllVMData[1].SSHPort -username $user -password $password -command "iperf3 -s -D" -RunInBackground -runAsSudo
 			}
 			Run-LinuxCmd -ip $AllVMData[0].PublicIP -port $AllVMData[0].SSHPort -username $user -password $password -command "bash ./workCommand.sh" -RunInBackground -runAsSudo
@@ -175,6 +176,8 @@ SetTestStateCompleted
 		}
 		if ($isMemoryWorkloadEnable -eq 1) {
 			$workCommand = @"
+source utils.sh
+command -v stress-ng > /dev/null || install_stress_ng
 stress-ng --vm 16 --vm-bytes 100% -t 10m
 "@
 			Set-Content "$LogDir\workCommand.sh" $workCommand
@@ -186,20 +189,12 @@ stress-ng --vm 16 --vm-bytes 100% -t 10m
 echo disk > /sys/power/state
 "@
 		Set-Content "$LogDir\test.sh" $testcommand
-
-		$setupcommand = @"
-source utils.sh
-update_repos
-install_package "ethtool stress-ng"
-"@
-		Set-Content "$LogDir\setup.sh" $setupcommand
 		#endregion
 
 		#region Upload files to VM
 		foreach ($VMData in $AllVMData) {
 			Copy-RemoteFiles -uploadTo $VMData.PublicIP -port $VMData.SSHPort -files "$constantsFile,$($CurrentTestData.files),$LogDir\*.sh" -username $user -password $password -upload
 			Write-LogInfo "Copied the script files to the VM"
-			Run-LinuxCmd -ip $VMData.PublicIP -port $VMData.SSHPort -username $user -password $password -command "bash ./setup.sh" -runAsSudo
 		}
 		#endregion
 
@@ -209,7 +204,7 @@ install_package "ethtool stress-ng"
 		} else {
 			#region Configuration for the hibernation
 			Write-LogInfo "New kernel compiling..."
-			Run-LinuxCmd -ip $AllVMData[0].PublicIP -port $AllVMData[0].SSHPort -username $user -password $password -command "./SetupHbKernel.sh" -RunInBackground -runAsSudo -ignoreLinuxExitCode:$true | Out-Null
+			Run-LinuxCmd -ip $AllVMData[0].PublicIP -port $AllVMData[0].SSHPort -username $user -password $password -command "bash ./SetupHbKernel.sh" -RunInBackground -runAsSudo -ignoreLinuxExitCode:$true | Out-Null
 			Write-LogInfo "Executed SetupHbKernel script inside VM, $($AllVMData[0].PublicIP)"
 			#endregion
 
@@ -266,6 +261,7 @@ install_package "ethtool stress-ng"
 		Start-WorkLoad "beforehb"
 
 		if ($isNetworkWorkloadEnable -eq 1) {
+			Run-LinuxCmd -ip $AllVMData[0].PublicIP -port $AllVMData[0].SSHPort -username $user -password $password -command "command -v ethtool > /dev/null || install_package ethtool" -runAsSudo | Out-Null
 			$initialQueueSize = Run-LinuxCmd -ip $AllVMData[0].PublicIP -port $AllVMData[0].SSHPort -username $user -password $password -command "ethtool -S eth0 | grep -i tx_queue | grep bytes | wc -l" -runAsSudo
 		}
 
@@ -299,7 +295,7 @@ install_package "ethtool stress-ng"
 
 		# Wait for VM resume
 		if ((Is-VmAlive -AllVMDataObject $AllVMData[0] -MaxRetryCount 70) -eq "False"){
-			throw "VM resume did not finish after $maxVMWakeupMin minutes."
+			throw "VM resume did not finish after retry 70 times."
 		}
 
 		# Verify kernel panic or call trace

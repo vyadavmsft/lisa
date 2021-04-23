@@ -2229,7 +2229,7 @@ function install_epel () {
 					epel_rpm_url="https://dl.fedoraproject.org/pub/epel/epel-release-latest-6.noarch.rpm"
 				elif [[ $DISTRO_VERSION =~ ^7\. ]]; then
 					epel_rpm_url="https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm"
-				elif [[ $DISTRO_VERSION == "8.0" ]]; then
+				elif [[ $DISTRO_VERSION =~ ^8\. ]]; then
 					epel_rpm_url="https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm"
 				else
 					LogErr "Unsupported version to install epel repository"
@@ -3871,5 +3871,52 @@ function found_sys_log() {
 		return 1
 	else
 		return 0
+	fi
+}
+
+function install_stress_ng () {
+	LogMsg "Detected $DISTRO_NAME $DISTRO_VERSION; installing required packages of stress-ng"
+	stress_ng_url="https://github.com/ColinIanKing/stress-ng.git"
+	case "$DISTRO_NAME" in
+		oracle|rhel|centos)
+			install_epel
+			yum -y --nogpgcheck install stress-ng
+			;;
+
+		ubuntu|debian)
+			dpkg_configure
+			if [[ "${DISTRO_NAME}" == "ubuntu" ]]; then
+				apt-get -y install stress-ng
+			elif [[ "${DISTRO_NAME}" == "debian" ]]; then
+				apt-get -y install stress-ng
+			fi
+			;;
+
+		sles|sle_hpc)
+			zypper --no-gpg-checks --non-interactive --gpg-auto-import-keys install stress-ng
+			;;
+
+		*)
+			install_package stress-ng
+	esac
+
+	stress-ng -V > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+		update_repos
+		command -v gcc > /dev/null || install_package gcc
+		command -v make > /dev/null || install_package make
+		command -v git > /dev/null || install_package git
+		rm -rf stress-ng
+		git clone $stress_ng_url
+		pushd stress-ng
+		make; make install
+		stress-ng -V > /dev/null 2>&1
+		if [ $? -ne 0 ]; then
+			LogErr "Unable to install stress-ng from $stress_ng_url"
+			return 1
+		else
+			LogMsg "stress-ng installed from repository"
+		fi
+		popd
 	fi
 }

@@ -98,7 +98,7 @@ echo disk > /sys/power/state
 			Write-LogInfo "Environment has been set up..."
 		} else {
 			# Configuration for the hibernation
-			Run-LinuxCmd -ip $AllVMData.PublicIP -port $AllVMData.SSHPort -username $user -password $password -command "./SetupHbKernel.sh" -RunInBackground -runAsSudo -ignoreLinuxExitCode:$true | Out-Null
+			Run-LinuxCmd -ip $AllVMData.PublicIP -port $AllVMData.SSHPort -username $user -password $password -command "bash ./SetupHbKernel.sh" -RunInBackground -runAsSudo -ignoreLinuxExitCode:$true | Out-Null
 			Write-LogInfo "Executed SetupHbKernel script inside VM"
 
 			# Wait for kernel compilation completion. 90 min timeout
