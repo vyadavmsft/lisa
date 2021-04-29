@@ -719,7 +719,7 @@ Scenario 2 : You need to run all the performance tests quickly.
 	</Parameter>
 	<Parameter>
 		<ReplaceThis>PERF_STORAGE_ACCOUNT_TYPE</ReplaceThis>
-		<ReplaceWith>Premium_LRS</ReplaceWith>
+		<ReplaceWith>Standard_LRS</ReplaceWith>
 	</Parameter>
 	<Parameter>
 		<ReplaceThis>VM_HOT_RESIZE_TEST_MODE</ReplaceThis>
