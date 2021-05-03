@@ -114,10 +114,10 @@ Class AzureController : TestController {
 		}
 		else {
 			if (!$this.CustomParams["PlatformFaultDomainCount"]) {
-				$this.CustomParams["PlatformFaultDomainCount"] = 2
+				$this.CustomParams["PlatformFaultDomainCount"] = 1
 			}
 			if (!$this.CustomParams["PlatformUpdateDomainCount"]) {
-				$this.CustomParams["PlatformUpdateDomainCount"] = 5
+				$this.CustomParams["PlatformUpdateDomainCount"] = 1
 			}
 		}
 		$this.TestProvider.EnableTelemetry = $ParamTable["EnableTelemetry"]
