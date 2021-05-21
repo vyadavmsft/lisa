@@ -261,6 +261,28 @@ function Main {
         Write-LogInfo "Checking test run status..."
         $finalStatus = Run-LinuxCmd -ip $allVMData.PublicIP -port $allVMData.SSHPort `
             -username "root" -password $password -command "cat state.txt"
+        if ($finalStatus -imatch "TestRunning") {
+            Write-LogInfo "Powershell job for test is completed but test is still running."
+            while ($finalStatus -imatch "TestRunning") {
+                $currentStatus = Run-LinuxCmd -ip $allVMData.PublicIP -port $allVMData.SSHPort `
+                -username "root" -password $password -command "tail -1 fioConsoleLogs.txt" `
+                -runAsSudo -runMaxAllowedTime 6000
+                Write-LogInfo "Current Test Status: $currentStatus"
+                if ($currentStatus -imatch "Doing forceful exit of this job") {
+                    $FioStuckCounter++
+                    if ( $FioStuckCounter -eq $MaxFioStuckAttempts) {
+                        throw "FIO is stuck, aborting the test"
+                    }
+                } else {
+                    $FioStuckCounter = 0
+                }
+
+                Wait-Time -seconds 30
+                $finalStatus = Run-LinuxCmd -ip $allVMData.PublicIP -port $allVMData.SSHPort `
+                -username "root" -password $password -command "cat state.txt"
+            }
+        }
+
         if ($finalStatus -imatch "TestFailed") {
             Write-LogErr "Test failed. Last known status : $currentStatus."
             $testResult = "FAIL"
@@ -269,9 +291,6 @@ function Main {
             $testResult = "ABORTED"
         } elseif ($finalStatus -imatch "TestCompleted") {
             $testResult = "PASS"
-        } elseif ($finalStatus -imatch "TestRunning") {
-            Write-LogInfo "Powershell job for test is completed but test is still running."
-            $testResult = "FAILED"
         }
 
         if ($testResult -eq "PASS" -or $testResult -eq "FAIL") {
