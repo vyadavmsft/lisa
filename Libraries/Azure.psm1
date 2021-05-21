@@ -509,6 +509,9 @@ Function Invoke-AllResourceGroupDeployments($SetupTypeData, $CurrentTestData, $R
 		}
 		Write-LogInfo "Storage Account Type : $StorageAccountType"
 
+		$DataDiskStorageAccountType = $CurrentTestData.SetupConfig.StorageAccountType
+		Write-LogInfo "Data Disk Storage Account Type : $DataDiskStorageAccountType"
+
 		#Region Define all Variables.
 
 		Write-LogInfo "Generating Template : $azuredeployJSONFilePath"
@@ -1570,7 +1573,7 @@ Function Invoke-AllResourceGroupDeployments($SetupTypeData, $CurrentTestData, $R
 						Add-Content -Value "$($indents[7])^caching^: ^$($dataDisk.HostCaching)^," -Path $jsonFile
 						Add-Content -Value "$($indents[7])^managedDisk^:" -Path $jsonFile
 						Add-Content -Value "$($indents[7]){" -Path $jsonFile
-						Add-Content -Value "$($indents[8])^storageAccountType^: ^$StorageAccountType^" -Path $jsonFile
+						Add-Content -Value "$($indents[8])^storageAccountType^: ^$DataDiskStorageAccountType^" -Path $jsonFile
 						Add-Content -Value "$($indents[7])}" -Path $jsonFile
 						Add-Content -Value "$($indents[6])}" -Path $jsonFile
 						Write-LogInfo "Added managed $($dataDisk.DiskSizeInGB)GB Datadisk to $($dataDisk.LUN)."
@@ -1605,7 +1608,7 @@ Function Invoke-AllResourceGroupDeployments($SetupTypeData, $CurrentTestData, $R
 					Add-Content -Value "$($indents[7])^caching^: ^ReadOnly^," -Path $jsonFile
 					Add-Content -Value "$($indents[7])^managedDisk^:" -Path $jsonFile
 					Add-Content -Value "$($indents[7]){" -Path $jsonFile
-					Add-Content -Value "$($indents[8])^storageAccountType^: ^$StorageAccountType^" -Path $jsonFile
+					Add-Content -Value "$($indents[8])^storageAccountType^: ^$DataDiskStorageAccountType^" -Path $jsonFile
 					Add-Content -Value "$($indents[7])}" -Path $jsonFile
 					Add-Content -Value "$($indents[6])}" -Path $jsonFile
 					$dataDiskAdded = $true
