@@ -127,8 +127,7 @@ RunFIO()
 					tar -cvzf $compressedFileName $LOGDIR/
 					exit 1
 				fi
-				iostatPID=$(ps -ef | awk '/iostat/ && !/awk/ { print $2 }')
-				kill -9 $iostatPID
+				pkill -f iostat
 				qDepth=$((qDepth*2))
 				iteration=$((iteration+1))
 				numJobIterator=$((numJobIterator+1))
