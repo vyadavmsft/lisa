@@ -48,6 +48,11 @@ RunFIO()
 	if [ $type == "disk" ]; then
 		mdVolume="/dev/sdc"
 	fi
+
+	if [ $storageType == "temp" ]; then
+		mdVolume="/dev/sdb"
+	fi
+
 	FILEIO="--size=${fileSize} --direct=1 --ioengine=libaio --filename=${mdVolume} --overwrite=1 "
 	if [ -n "${NVME}" ]; then
 		FILEIO="--direct=1 --ioengine=libaio --filename=${nvme_namespaces} --gtod_reduce=1"
@@ -127,7 +132,8 @@ RunFIO()
 					tar -cvzf $compressedFileName $LOGDIR/
 					exit 1
 				fi
-				pkill -f iostat
+				iostatPID=$(ps -ef | awk '/iostat/ && !/awk/ { print $2 }')
+				kill -9 $iostatPID
 				qDepth=$((qDepth*2))
 				iteration=$((iteration+1))
 				numJobIterator=$((numJobIterator+1))
@@ -380,7 +386,7 @@ fi
 # Creating RAID before triggering test
 if [ -n "${NVME}" ]; then
 	ConfigNVME
-else
+elif [ ${storageType} == "data" ]; then
 	CreateRAID0
 fi
 

@@ -174,6 +174,12 @@ function Consume-FioPerformanceResults {
             $BlockSize_KB = $fioPerfResult.block_size
         }
 
+        if ($currentTestData.testName -imatch "PERF-TEMP-STORAGE") {
+            $diskSetup = 'Temp Storage'
+        } else {
+            $diskSetup = 'RAID0:12xP30'
+        }
+
         if ($BlockSize_KB) {
             if ($testResult -eq "PASS") {
                 $resultMap = @{}
@@ -186,7 +192,7 @@ function Consume-FioPerformanceResults {
                 $resultMap["HostBy"] = $CurrentTestData.SetupConfig.TestLocation
                 $resultMap["GuestOSType"] = "Linux"
                 $resultMap["GuestSize"] = $allVMData.InstanceSize
-                $resultMap["DiskSetup"] = 'RAID0:12xP30'
+                $resultMap["DiskSetup"] = $diskSetup
                 $resultMap["BlockSize_KB"] = $BlockSize_KB
                 $resultMap["qDepth"] = $QDepth
                 $resultMap["seq_read_iops"] = $seq_read_iops
