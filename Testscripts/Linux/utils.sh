@@ -2611,13 +2611,15 @@ function build_ntttcp () {
 		ntttcp_version=${1}
 	fi
 	if [ $ntttcp_version == "master" ]; then
-		git clone https://github.com/Microsoft/ntttcp-for-linux.git
-		pushd ntttcp-for-linux/src/ && make && make install
+		git clone https://github.com/lubaihua33/ntttcp-for-linux.git
+		pushd ntttcp-for-linux/ && git checkout commit
+		pushd src/ && make && make install
 	else
 		wget https://github.com/Microsoft/ntttcp-for-linux/archive/${ntttcp_version}.tar.gz
 		tar -zxvf ${ntttcp_version}.tar.gz
 		pushd ntttcp-for-linux-${ntttcp_version/v/}/src/ && make && make install
 	fi
+	popd
 	popd
 }
 
