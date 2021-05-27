@@ -368,7 +368,7 @@
       <param>startQDepth=1</param>
       <param>maxQDepth=256</param>
       <param>startIO=4</param>
-      <param>ioruntime=FIO_RUNTIME_IN_SECONDS</param>
+      <param>ioruntime=60</param>
       <param>maxIO=4</param>
       <param>fileSize=32G</param>
       <param>parseTimeout=FIO_LOG_PARSE_TIMEOUT</param>
@@ -394,7 +394,7 @@
       <param>startQDepth=1</param>
       <param>maxQDepth=256</param>
       <param>startIO=1024</param>
-      <param>ioruntime=FIO_RUNTIME_IN_SECONDS</param>
+      <param>ioruntime=60</param>
       <param>maxIO=1024</param>
       <param>fileSize=32G</param>
       <param>parseTimeout=FIO_LOG_PARSE_TIMEOUT</param>
