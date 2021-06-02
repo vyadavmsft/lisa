@@ -373,7 +373,16 @@ LogMsg "Kernel version: $KERNEL_VERSION"
 #    'LKS_VERSION_GIT_TAG' is passed from Test Definition in .\XML\TestCases\CommunityTests.xml.
 #    'LKS_VERSION_GIT_TAG' default value is defined in .\XML\Other\ReplaceableTestParameters.xml.
 # 3) If the kernel is distro kernel, we download distro kernel source code.
-if [[ $DISTRO =~ "ubuntu" && $KERNEL_VERSION != *azure*
+if [[ "$LKS_VERSION_GIT_TAG" != "" ]]; then
+    LogMsg "Kernel source git: $stable_kernel_src"
+    LogMsg "Kernel git tag: $LKS_VERSION_GIT_TAG"
+    cd /root
+    git clone $stable_kernel_src
+    check_exit_status "Clone stable kernel source code" "exit"
+    LKS_SRCDIR="/root/linux"
+    cd "$LKS_SRCDIR"
+    git checkout "$LKS_VERSION_GIT_TAG"
+elif [[ $DISTRO =~ "ubuntu" && $KERNEL_VERSION != *azure*
     || $DISTRO =~ "debian" && $KERNEL_VERSION != *cloud*
     || $DISTRO =~ "centos" && $KERNEL_VERSION != *el*
     || $DISTRO =~ "redhat" && $KERNEL_VERSION != *el*
@@ -385,15 +394,6 @@ if [[ $DISTRO =~ "ubuntu" && $KERNEL_VERSION != *azure*
         exit 0
     fi
     CUSTOM_KERNEL_FLAG="TRUE"
-elif [[ "$LKS_VERSION_GIT_TAG" != "" ]]; then
-    LogMsg "Kernel source git: $stable_kernel_src"
-    LogMsg "Kernel git tag: $LKS_VERSION_GIT_TAG"
-    cd /root
-    git clone $stable_kernel_src
-    check_exit_status "Clone stable kernel source code" "exit"
-    LKS_SRCDIR="/root/linux"
-    cd "$LKS_SRCDIR"
-    git checkout "$LKS_VERSION_GIT_TAG"
 else
     download_distro_kernel
     if [ $? -ne 0 ]; then
