@@ -298,6 +298,37 @@
             </VirtualMachine>
         </ResourceGroup>
     </TwoVM3NIC>
+    <TwoVM4NIC>
+        <isDeployed>NO</isDeployed>
+        <ResourceGroup>
+            <VirtualMachine>
+                <state></state>
+                <InstanceSize>Standard_DS5_v2</InstanceSize>
+                <RoleName>server-vm</RoleName>
+                <EndPoints>
+                    <Name>SSH</Name>
+                    <Protocol>tcp</Protocol>
+                    <LocalPort>22</LocalPort>
+                    <PublicPort>1111</PublicPort>
+                </EndPoints>
+                <DataDisk></DataDisk>
+                <ExtraNICs>3</ExtraNICs>
+            </VirtualMachine>
+            <VirtualMachine>
+                <state></state>
+                <InstanceSize>Standard_DS5_v2</InstanceSize>
+                <RoleName>client-vm</RoleName>
+                <EndPoints>
+                    <Name>SSH</Name>
+                    <Protocol>tcp</Protocol>
+                    <LocalPort>22</LocalPort>
+                    <PublicPort>1112</PublicPort>
+                </EndPoints>
+                <DataDisk></DataDisk>
+                <ExtraNICs>3</ExtraNICs>
+            </VirtualMachine>
+        </ResourceGroup>
+    </TwoVM4NIC>
     <TwoVM8NIC>
         <isDeployed>NO</isDeployed>
         <ResourceGroup>
