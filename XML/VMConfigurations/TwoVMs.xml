@@ -303,8 +303,8 @@
         <ResourceGroup>
             <VirtualMachine>
                 <state></state>
-                <InstanceSize>Standard_DS5_v2</InstanceSize>
-                <RoleName>server-vm</RoleName>
+                <InstanceSize>Standard_D12_v2</InstanceSize>
+                <RoleName></RoleName>
                 <EndPoints>
                     <Name>SSH</Name>
                     <Protocol>tcp</Protocol>
@@ -315,9 +315,10 @@
                 <ExtraNICs>3</ExtraNICs>
             </VirtualMachine>
             <VirtualMachine>
+                <DeployOnDifferentHyperVHost>yes</DeployOnDifferentHyperVHost>
                 <state></state>
-                <InstanceSize>Standard_DS5_v2</InstanceSize>
-                <RoleName>client-vm</RoleName>
+                <InstanceSize>Standard_D12_v2</InstanceSize>
+                <RoleName>dependency-vm</RoleName>
                 <EndPoints>
                     <Name>SSH</Name>
                     <Protocol>tcp</Protocol>
