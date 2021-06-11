@@ -101,7 +101,7 @@
     <TestParameters>
       <param>Remote_Script=SRIOV-VerifyVF-Connection.sh</param>
       <param>Set_SSH=yes</param>
-      <param>NIC_COUNT=7</param>
+      <param>NIC_COUNT=3</param>
       <param>MAX_NICS=yes</param>
       <param>NETMASK=255.255.255.0</param>
       <param>Switch_Name=HYPERV_PERF_NIC_NAME</param>
@@ -127,7 +127,7 @@
       <param>Remote_Script=SRIOV-VerifyVF-Connection.sh</param>
       <param>Set_SSH=yes</param>
       <param>VCPU=max</param>
-      <param>NIC_COUNT=7</param>
+      <param>NIC_COUNT=3</param>
       <param>MAX_NICS=yes</param>
       <param>NETMASK=255.255.255.0</param>
       <param>Switch_Name=HYPERV_PERF_NIC_NAME</param>
