@@ -40,14 +40,36 @@ function Main {
     # Run the guest VM side script
     #
     try {
-        Run-LinuxCmd -username $user -password $password -ip $allVmData.PublicIP -port $allVmData.SSHPort `
-            "bash UpstreamKernelBuild.sh" -runAsSudo | Out-Null
+        $testJob = Run-LinuxCmd -ip $allVMData.PublicIP -port $allVMData.SSHPort `
+            -username $user -password $password -command "bash UpstreamKernelBuild.sh > UpstreamKernelBuild.log 2>&1" `
+            -RunInBackground -runAsSudo
+
+        Write-LogInfo "Monitoring test run..."
+        $StuckCounter = 0
+        $MaxStuckAttempts = 30
+        while ((Get-Job -Id $testJob).State -eq "Running") {
+            $currentStatus = Run-LinuxCmd -ip $allVMData.PublicIP -port $allVMData.SSHPort `
+                -username $user -password $password -command "tail -1 UpstreamKernelBuild.log" `
+                -runAsSudo -runMaxAllowedTime 6000
+            Write-LogInfo "Current Test Status: $currentStatus"
+            if ($currentStatus -imatch "Doing forceful exit of this job") {
+                $StuckCounter++
+                if ( $StuckCounter -eq $MaxStuckAttempts) {
+                    throw "FIO is stuck, aborting the test"
+                }
+            } else {
+                $StuckCounter = 0
+            }
+
+            Wait-Time -seconds 30
+        }
 
         $status = Run-LinuxCmd -ip $allVMData.PublicIP -port $allVMData.SSHPort `
             -username $user -password $password -command "cat state.txt"
         Copy-RemoteFiles -downloadFrom $allVMData.PublicIP -port $allVMData.SSHPort `
             -username $user -password $password -download `
             -downloadTo $LogDir -files "*.txt, *.log"
+        
         if ($status -imatch "TestFailed") {
             Write-LogErr "Test failed."
             $testResult = "FAIL"

@@ -6,7 +6,7 @@
 # 
 ########################################################################################################
 # Source utils.sh
-set -xe -o pipefail
+#set -xe -o pipefail
 . utils.sh || {
 	echo "Error: unable to source utils.sh!"
 	echo "TestAborted" > state.txt
@@ -18,6 +18,9 @@ UtilsInit
 # Constants/Globals
 # Get distro information
 GetDistro
+
+# update repos
+update_repos
 
 function Main() {
     BASEDIR=$(dirname $0)
@@ -46,31 +49,46 @@ function Main() {
     # 
     if [ -f constants.sh ]
     then
+        LogMsg "Sourcing constants.sh .. "
         source constants.sh
     else
 		LogErr "Failed to clone repo: $lis_pipeline_git"
         exit 1
     fi
 
-    # cloning scripts required to build kernel package
+    # install git if not installed already
+    which git
+    if [ $? -ne 0 ]
+    then
+        install_package git
+    fi
 
-    git clone --single-branch --branch ${LIS_PIPELINE_GIT_BRANCH} ${LIS_PIPELINE_GIT}
+    # cloning scripts required to build kernel package
+    #
+    git clone --single-branch --branch ${LIS_PIPELINE_GIT_BRANCH} ${LIS_PIPELINE_GIT_URL}
 
     if [ $? != 0 ]
     then
-        LogErr "Failed to clone repo: ${LIS_PIPELINE_GIT_BRANCH} branch: ${LIS_PIPELINE_GIT}"
+        LogErr "Failed to clone repo: ${LIS_PIPELINE_GIT_BRANCH} branch: ${LIS_PIPELINE_GIT_URL}"
         exit 1
     else
-        LogMsg "Succesfully cloned repo: ${LIS_PIPELINE_GIT_BRANCH} branch: ${LIS_PIPELINE_GIT}"
+        LogMsg "Succesfully cloned repo: ${LIS_PIPELINE_GIT_BRANCH} branch: ${LIS_PIPELINE_GIT_URL}"
     fi
 
+    # 
+    # Existance of '/etc/kernel-img.conf' file is blocking for user input during installation 
+    # of 'kernel-package'
+    if [ -f /etc/kernel-img.conf ]
+    then 
+        mv /etc/kernel-img.conf /etc/kernel-img.conf.bkp
+    fi
+    
     pushd $BASEDIR/lis-pipeline/
-
     #scripts/package_building/kernel_versions.ini
     pushd scripts/package_building
     #--destination_path "${BUILD_NUMBER}-${BRANCH_NAME}-${KERNEL_ARTIFACTS_PATH}" \
 
-    set -xe
+
     LogMsg "Building artifacts..."
     bash build_artifacts.sh \
     --git_url "${KERNEL_GIT_URL}" \

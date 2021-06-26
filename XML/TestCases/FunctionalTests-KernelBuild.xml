@@ -27,7 +27,7 @@
         <Priority>3</Priority>
         <SetupConfig>
             <SetupType>OneVM</SetupType>
-            <OverrideVMSize>Standard_D4s_v3</OverrideVMSize>
+            <OverrideVMSize>Standard_D4s_v3,Standard_D16_v3</OverrideVMSize>
         </SetupConfig>
     </test>
 </TestCases>
