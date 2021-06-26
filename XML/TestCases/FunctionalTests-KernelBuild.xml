@@ -1,0 +1,33 @@
+<TestCases>
+    <test>
+        <testName>KERNEL-BUILD-UPSTREAM</testName>
+        <testScript>KERNEL-BUILD-UPSTREAM.ps1</testScript>
+        <files>.\Testscripts\Linux\UpstreamKernelBuild.sh,.\Testscripts\Linux\utils.sh</files>
+        <TestParameters>
+            <param>KERNEL_GIT_URL="git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git"</param>
+            <param>KERNEL_GIT_BRANCH="master"</param>
+            <param>LIS_PIPELINE_GIT_URL="https://github.com/LIS/lis-pipeline.git"</param>
+            <param>LIS_PIPELINE_GIT_BRANCH="master"</param>
+            <param>KERNEL_ARTIFACTS_PATH="upstream-kernel-artifacts"</param>
+            <param>INSTALL_DEPS="True"</param>
+            <param>THREAD_NUMBER="x3"</param>
+            <param>UBUNTU_VERSION="16"</param>
+            <param>BUILD_PATH="/mnt/tmp/upstream-kernel-build-folder"</param>
+            <param>KERNEL_CONFIG="Microsoft/config-azure"</param>
+            <param>CLEAN_ENV="True"</param>
+            <param>USE_CCACHE="True"</param>
+            <param>USE_KERNEL_FOLDER_PREFIX="True"</param>
+            <param>CREATE_CHANGELOG="False"</param>
+            <param>KERNEL_DEBUG="False"</param>
+        </TestParameters>
+        <Platform>Azure,HyperV</Platform>
+        <Category>Functional</Category>
+        <Area>CORE</Area>
+        <Tags>boot</Tags>
+        <Priority>3</Priority>
+        <SetupConfig>
+            <SetupType>OneVM</SetupType>
+            <OverrideVMSize>Standard_D4s_v3</OverrideVMSize>
+        </SetupConfig>
+    </test>
+</TestCases>
