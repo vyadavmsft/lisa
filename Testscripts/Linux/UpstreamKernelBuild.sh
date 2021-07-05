@@ -6,7 +6,7 @@
 # 
 ########################################################################################################
 # Source utils.sh
-#set -xe -o pipefail
+set -x #e -o pipefail
 . utils.sh || {
 	echo "Error: unable to source utils.sh!"
 	echo "TestAborted" > state.txt
@@ -18,6 +18,13 @@ UtilsInit
 # Constants/Globals
 # Get distro information
 GetDistro
+
+if [ $DISTRO_NAME == 'rhel' ]
+then
+    yum update -y --disablerepo=* --enablerepo="*microsoft*"
+    yum install -y gcc-toolset-9-gcc.x86_64
+    source /opt/rh/gcc-toolset-9/enable
+fi
 
 # update repos
 update_repos
@@ -52,7 +59,7 @@ function Main() {
         LogMsg "Sourcing constants.sh .. "
         source constants.sh
     else
-		LogErr "Failed to clone repo: $lis_pipeline_git"
+		LogErr "cannot find constants.sh!"
         exit 1
     fi
 
@@ -65,8 +72,13 @@ function Main() {
 
     # cloning scripts required to build kernel package
     #
-    git clone --single-branch --branch ${LIS_PIPELINE_GIT_BRANCH} ${LIS_PIPELINE_GIT_URL}
-
+    if [ -d lis-pipeline ]
+    then 
+        echo rm -rf lis-pipeline
+    else
+        git clone --single-branch --branch ${LIS_PIPELINE_GIT_BRANCH} ${LIS_PIPELINE_GIT_URL}
+    fi
+    
     if [ $? != 0 ]
     then
         LogErr "Failed to clone repo: ${LIS_PIPELINE_GIT_BRANCH} branch: ${LIS_PIPELINE_GIT_URL}"
@@ -104,7 +116,6 @@ function Main() {
     --use_kernel_folder_prefix "${USE_KERNEL_FOLDER_PREFIX}" \
     --create_changelog "${CREATE_CHANGELOG}" \
     --enable_kernel_debug "${KERNEL_DEBUG}"
-    popd
 
     if [ $? != 0 ]
     then
@@ -113,6 +124,7 @@ function Main() {
     else
         LogMsg "Succesful: build_artifacts"
     fi
+    popd
  
 # 
 # srm@smyakam-u18:~/lis-pipeline/scripts/package_building/upstream-kernel-artifacts/linux-next-5.13.0-2a8927f-25062021/deb$ ls
