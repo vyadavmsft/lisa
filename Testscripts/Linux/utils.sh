@@ -2545,18 +2545,15 @@ function build_lagscope () {
 		lagscope_version=${1}
 	fi
 	rm -rf lagscope
-	git clone https://github.com/Microsoft/lagscope
-	if [ $lagscope_version ] && [[ $lagscope_version == v* ]]; then
-		currentVersion="${lagscope_version:1}"
-	else
-		currentVersion="${lagscope_version}"
-	fi
+	git clone https://github.com/lubaihua33/lagscope.git
+	currentVersion="master"
+
 	if [ $currentVersion ] && ( [ $currentVersion \> "0.2.0" ] || [ $currentVersion == "master" ] ); then
-		pushd lagscope && ./do-cmake.sh build && ./do-cmake.sh install
+		pushd lagscope && git checkout add_99th && ./do-cmake.sh build && ./do-cmake.sh install
 		popd
 		ln -sf /usr/local/bin/lagscope /usr/bin/lagscope
 	else
-		pushd lagscope/src && git checkout "$lagscope_version" && make && make install
+		pushd lagscope/src && git checkout add_99th && make && make install
 		popd
 	fi
 }
