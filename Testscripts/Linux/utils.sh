@@ -3883,3 +3883,47 @@ function found_sys_log() {
 		return 0
 	fi
 }
+
+function upload_files_to_azfileshare(){
+    smb_share_url=""
+    username=""
+    password=""
+    local_folder=""
+    target_folder=""
+    
+    while true;do
+        case "$1" in
+            --smb_url)
+                smb_share_url="$2" 
+                shift 2;;
+            --smb_username)
+                username="$2"
+                shift 2;;
+            --smb_password)
+                password="$2"
+                shift 2;;
+            --local_folder)
+                local_folder="$2"
+                shift 2;;
+            --target_folder)
+                target_folder="$2"
+                shift 2;;
+            --) shift; break ;;
+            *) break ;;
+        esac
+    done
+    random_string=`tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo ''`
+    mount_point="/tmp/${random_string}"
+    mkdir -p $mount_point
+    sudo mount -t cifs "${smb_share_url}" $mount_point \
+        -o vers=3.0,username=${username},password=${password},dir_mode=0777,file_mode=0777,sec=ntlmssp
+    relpath=$(realpath "$local_folder")
+    if [ ! -e $mount_point/$target_folder ]
+    then
+        LogMsg "Path '$target_folder' doesn't exists on the smb share. Creating it.."
+        mkdir $mount_point/$target_folder
+    fi
+    LogMsg "Uploading files to ${smb_share_url}/$target_folder"
+    sudo cp -vrf "$relpath/"* $mount_point/$target_folder
+    sudo umount $mount_point
+}
