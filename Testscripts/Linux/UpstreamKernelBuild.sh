@@ -53,7 +53,11 @@ function Main() {
     # USE_KERNEL_FOLDER_PREFIX='True'
     # CREATE_CHANGELOG='False'
     # KERNEL_DEBUG='False'
+    # ARTIFACTS_SMB_URL=""
+    # ARTIFACTS_SMB_USERNAME=""
+    # ARTIFACTS_SMB_PASSWORD=""
     # 
+
     if [ -f constants.sh ]
     then
         LogMsg "Sourcing constants.sh .. "
@@ -137,6 +141,14 @@ function Main() {
 # linux-next-source-5.13.0-rc7-2a8927f0efb6_25062021_all.deb
 # meta_packages
 # srm@smyakam-u18:~/lis-pipeline/scripts/package_building/upstream-kernel-artifacts/linux-next-5.13.0-2a8927f-25062021/deb$
+#
+    LogMsg "Uploading artifacts"
+    upload_files_to_azfileshare \
+    --smb_url  "${ARTIFACTS_SMB_URL}" \
+    --smb_username "${ARTIFACTS_SMB_USERNAME}"  \
+    --smb_password "${ARTIFACTS_SMB_PASSWORD}" \
+    --target_folder "kernel_artifacts" \
+    --local_folder "$BASEDIR/lis-pipeline/scripts/package_building/upstream-kernel-artifacts" 
 
 	LogMsg "Main function of setup completed"
 }

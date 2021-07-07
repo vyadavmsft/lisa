@@ -19,8 +19,11 @@
             <param>USE_KERNEL_FOLDER_PREFIX="True"</param>
             <param>CREATE_CHANGELOG="False"</param>
             <param>KERNEL_DEBUG="False"</param>
+            <param>ARTIFACTS_SMB_URL=""</param>
+            <param>ARTIFACTS_SMB_USERNAME=""</param>
+            <param>ARTIFACTS_SMB_PASSWORD=""</param>
         </TestParameters>
-        <Platform>Azure,HyperV</Platform>
+        <Platform>Azure</Platform>
         <Category>Functional</Category>
         <Area>CORE</Area>
         <Tags>boot</Tags>
