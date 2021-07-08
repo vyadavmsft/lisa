@@ -143,12 +143,13 @@ function Main() {
 # srm@smyakam-u18:~/lis-pipeline/scripts/package_building/upstream-kernel-artifacts/linux-next-5.13.0-2a8927f-25062021/deb$
 #
     LogMsg "Uploading artifacts"
-    upload_files_to_azfileshare \
+    copy_files_azfileshare \
     --smb_url  "${ARTIFACTS_SMB_URL}" \
     --smb_username "${ARTIFACTS_SMB_USERNAME}"  \
     --smb_password "${ARTIFACTS_SMB_PASSWORD}" \
     --target_folder "kernel_artifacts" \
-    --local_folder "$BASEDIR/lis-pipeline/scripts/package_building/upstream-kernel-artifacts" 
+    --local_folder "$BASEDIR/lis-pipeline/scripts/package_building/upstream-kernel-artifacts" \
+    --copy_operation "upload"
 
 	LogMsg "Main function of setup completed"
 }

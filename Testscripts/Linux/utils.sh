@@ -3884,13 +3884,14 @@ function found_sys_log() {
 	fi
 }
 
-function upload_files_to_azfileshare(){
-    smb_share_url=""
-    username=""
-    password=""
-    local_folder=""
-    target_folder=""
-    
+function copy_files_azfileshare(){
+    smb_share_url="unknown"
+    username="unknown"
+    password="unknown"
+    local_folder="unknown"
+    target_folder="unknown"
+    copy_operation="unknown"
+
     while true;do
         case "$1" in
             --smb_url)
@@ -3908,22 +3909,50 @@ function upload_files_to_azfileshare(){
             --target_folder)
                 target_folder="$2"
                 shift 2;;
+            --copy_operation)
+                copy_operation="$2"
+                shift 2;;
             --) shift; break ;;
             *) break ;;
         esac
     done
+
     random_string=`tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo ''`
     mount_point="/tmp/${random_string}"
     mkdir -p $mount_point
+	
+	which mount.cifs
+	if [ ! $? -eq 0 ]; then
+		install_package cifs-utils
+	fi
+
     sudo mount -t cifs "${smb_share_url}" $mount_point \
         -o vers=3.0,username=${username},password=${password},dir_mode=0777,file_mode=0777,sec=ntlmssp
+	if [ ! $? -eq 0 ]; then
+		LogErr "Failued to mount ${smb_share_url}"
+	fi
+
     relpath=$(realpath "$local_folder")
-    if [ ! -e $mount_point/$target_folder ]
-    then
-        LogMsg "Path '$target_folder' doesn't exists on the smb share. Creating it.."
-        mkdir $mount_point/$target_folder
-    fi
-    LogMsg "Uploading files to ${smb_share_url}/$target_folder"
-    sudo cp -vrf "$relpath/"* $mount_point/$target_folder
+
+    LogMsg "${copy_operation}ing files to ${smb_share_url}/$target_folder"
+	if [ $copy_operation == 'upload' ]
+	then
+	    if [ ! -e $mount_point/$target_folder ]
+		then
+			LogMsg "Path '$target_folder' doesn't exists on the smb share. Creating it.."
+			mkdir $mount_point/$target_folder
+		fi
+		sudo cp -vrf "$relpath/"* $mount_point/$target_folder
+	elif [ $copy_operation == 'download' ]
+	then
+		if [ ! -e $relpath/ ]
+		then
+			LogMsg "Local path '$relpath' doesn't exists. Creating it.."
+			sudo mkdir -p $relpath/
+		fi		
+		sudo cp -vrf $mount_point/$target_folder/* "$relpath/"
+	else 
+		LogMsg "invalid 'copy_operation' value '$copy_operation'"
+	fi
     sudo umount $mount_point
 }
