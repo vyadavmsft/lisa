@@ -866,4 +866,22 @@
       <SetupType>OneVM</SetupType>
     </SetupConfig>
   </test>
+  <test>
+    <testName>Azure-NFS-SHARE</testName>
+    <testScript>Azure-NFS-SHARE.ps1</testScript>
+    <files>.\Testscripts\Linux\nfs_share.sh,.\Testscripts\Linux\utils.sh</files>
+    <TestParameters>
+      <param>nfsversion=4.1</param>
+      <param>nconnect=16</param>
+      <param>tarfile=https://github.com/LIS/lis-next/archive/refs/tags/v4.3.5.tar.gz</param>
+    </TestParameters>
+    <Platform>Azure</Platform>
+    <Category>Functional</Category>
+    <Area>STORAGE</Area>
+    <Tags>storage</Tags>
+    <Priority>1</Priority>
+    <SetupConfig>
+      <SetupType>OneVM</SetupType>
+    </SetupConfig>
+  </test>
 </TestCases>

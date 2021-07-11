@@ -310,20 +310,20 @@ Function Select-StorageAccountByTestLocation($CurrentTestData, [string]$Location
 	return $targetStorageAccount
 }
 
-Function PrepareAutoCompleteStorageAccounts ($storageAccountsRGName, $XMLSecretFile) {
-	# Create StorageAccounts needed for Run-LISAv2
-	$GetRandomCharacters = {
-		param($Length)
-		if ($Length) {
-			$characters = 'abcdefghiklmnoprstuvwxyz1234567890'
-			$random = 1..$Length | ForEach-Object { Get-Random -Maximum $characters.Length }
-			$private:ofs = ""
-			return [String]$characters[$random]
-		}
-		else {
-			Write-LogErr "unavailable length for GetRandomCharacters"
-		}
+# Create StorageAccounts needed for Run-LISAv2
+Function GetRandomCharacters ($Length) {
+	if ($Length) {
+		$characters = 'abcdefghiklmnoprstuvwxyz1234567890'
+		$random = 1..$Length | ForEach-Object { Get-Random -Maximum $characters.Length }
+		$private:ofs = ""
+		return [String]$characters[$random]
 	}
+	else {
+		throw "unavailable length for GetRandomCharacters"
+	}
+}
+
+Function PrepareAutoCompleteStorageAccounts ($storageAccountsRGName, $XMLSecretFile) {
 	$CreateStorageAccounts = {
 		param($StorageAccountsRGName, $StorageSKUName, $StorageAccountName, $Region)
 		if ($StorageAccountsRGName -and $StorageSKUName -and $StorageAccountName -and $Region) {
@@ -407,17 +407,17 @@ Function PrepareAutoCompleteStorageAccounts ($storageAccountsRGName, $XMLSecretF
 				$regionStorageMapping[$region] = @{}
 			}
 			if (!$regionStorageMapping.$region.StandardStorage) {
-				$storageAccountName = $lisaSAPrefix + $(&$GetRandomCharacters -Length 15)
+				$storageAccountName = $lisaSAPrefix + $(GetRandomCharacters -Length 15)
 				while (!((Get-AzStorageAccountNameAvailability -Name $storageAccountName).NameAvailable)) {
-					$storageAccountName = $lisaSAPrefix + $(&$GetRandomCharacters -Length 15)
+					$storageAccountName = $lisaSAPrefix + $(GetRandomCharacters -Length 15)
 				}
 				$regionStorageMapping[$region]["StandardStorage"] = &$CreateStorageAccounts -StorageAccountName $storageAccountName `
 					-StorageSKUName "Standard_LRS" -StorageAccountsRGName $storageAccountsRGName -Region $region
 			}
 			if (!$regionStorageMapping.$region.PremiumStorage) {
-				$storageAccountName = $lisaSAPrefix + $(&$GetRandomCharacters -Length 15)
+				$storageAccountName = $lisaSAPrefix + $(GetRandomCharacters -Length 15)
 				while (!((Get-AzStorageAccountNameAvailability -Name $storageAccountName).NameAvailable)) {
-					$storageAccountName = $lisaSAPrefix + $(&$GetRandomCharacters -Length 15)
+					$storageAccountName = $lisaSAPrefix + $(GetRandomCharacters -Length 15)
 				}
 				$regionStorageMapping[$region]["PremiumStorage"] = &$CreateStorageAccounts -StorageAccountName $storageAccountName `
 					-StorageSKUName "Premium_LRS" -StorageAccountsRGName $storageAccountsRGName -Region $region
