@@ -2265,6 +2265,26 @@ function enable_nfs_rhel() {
     fi
 }
 
+function install_nfs_package() {
+    GetDistro
+    case $DISTRO in
+        redhat* | redhat*)
+            package_name="nfs-utils"
+            ;;
+        ubuntu* | debian*)
+            package_name="nfs-common"
+            ;;
+        suse* | sles*)
+            package_name="nfs-client"
+            ;;
+        *)
+            LogErr "Distro '$DISTRO' not supported"
+            package_name=""
+            ;;
+    esac
+    install_package $package_name
+}
+
 # Install sshpass
 function install_sshpass () {
 	which sshpass
