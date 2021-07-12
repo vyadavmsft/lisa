@@ -1103,7 +1103,7 @@
       <param>numjobs=1</param>
       <param>ioruntime=FIO_RUNTIME_IN_SECONDS</param>
       <param>maxIO=4</param>
-      <param>fileSize=128G</param>
+      <param>fileSize=10G</param>
     </TestParameters>
     <Platform>Azure</Platform>
     <Category>Performance</Category>

@@ -24,7 +24,7 @@ RunFIO() {
 	SetTestStateRunning
 	FILEIO="--size=${fileSize} --direct=1 --ioengine=libaio --filename=fiodata --overwrite=1"
 
-	HOMEDIR=$HOME
+	HOMEDIR=$(pwd)
 	mv $HOMEDIR/FIOLog/ $HOMEDIR/FIOLog-$(date +"%m%d%Y-%H%M%S")/
 	LOGDIR="${HOMEDIR}/FIOLog"
 	JSONFILELOG="${LOGDIR}/jsonLog"
