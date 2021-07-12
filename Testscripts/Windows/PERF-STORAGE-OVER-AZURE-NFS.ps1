@@ -104,7 +104,7 @@ chmod 666 /home/$user/perf_fio.csv
         $FioStuckCounter = 0
         $MaxFioStuckAttempts = 10
         while ((Get-Job -Id $testJob).State -eq "Running") {
-            $currentStatus = Run-LinuxCmd -ip $AllVmData.PublicIP -port $AllVmData.SSHPort -username $user -password $password -command "tail -1 runlog.txt"-runAsSudo
+            $currentStatus = Run-LinuxCmd -ip $AllVmData.PublicIP -port $AllVmData.SSHPort -username $user -password $password -command "tail -1 fioConsoleLogs.txt"-runAsSudo
             Write-LogInfo "Current Test Status: $currentStatus"
             if ($currentStatus -imatch "Doing forceful exit of this job") {
                 $FioStuckCounter++
