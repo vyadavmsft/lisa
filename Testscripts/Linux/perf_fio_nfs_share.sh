@@ -21,7 +21,7 @@ UTIL_FILE="./utils.sh"
 UtilsInit
 
 RunFIO() {
-	UpdateTestState $ICA_TESTRUNNING
+	SetTestStateRunning
 	FILEIO="--size=${fileSize} --direct=1 --ioengine=libaio --filename=fiodata --overwrite=1"
 
 	HOMEDIR=$HOME
@@ -95,7 +95,7 @@ RunFIO() {
 	tar -cvzf $compressedFileName $LOGDIR/
 
 	echo "Test logs are located at ${LOGDIR}"
-	UpdateTestState $ICA_TESTCOMPLETED
+	SetTestStateCompleted
 }
 
 ############################################################
