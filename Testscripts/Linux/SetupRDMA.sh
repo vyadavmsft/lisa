@@ -444,7 +444,7 @@ function Main() {
 		export PATH=$PATH:"${mpirun_path%/*}"
 		LogMsg "$?: Set $mpirun_path to PATH, $PATH"
 		# add sourcing file in each session
-		echo "source ${mpirun_path%/*}/setvars.sh" >> $HOMEDIR/.bashrc
+		# echo "source ${mpirun_path%/*}/setvars.sh" >> $HOMEDIR/.bashrc
 
 		LogMsg "$?: Completed Intel MPI installation"
 
