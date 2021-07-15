@@ -424,10 +424,15 @@ function Main() {
 			LogMsg "Intel MPI installation running ..."
 			LogMsg "Downloading Intel MPI source code: $intel_mpi"
 			LogMsg "Intel MPI installer name: $intel_mpi_installer"
-			wget $intel_mpi
+			# wget $intel_mpi
 
 			LogMsg "Executing the silent installation"
-			bash ./$intel_mpi_installer -s -a -s --eula accept
+			# bash ./$intel_mpi_installer -s -a -s --eula accept
+			wget https://raw.githubusercontent.com/Azure/azhpc-images/master/common/download_and_verify.sh
+			IMPI_2021_VERSION="2021.2.0"
+			IMPI_2021_DOWNLOAD_URL=https://registrationcenter-download.intel.com/akdlm/irc_nas/17729/l_mpi_oneapi_p_2021.2.0.215_offline.sh
+			bash -x download_and_verify.sh  $IMPI_2021_DOWNLOAD_URL "d0d4cdd11edaff2e7285e38f537defccff38e37a3067c02f4af43a3629ad4aa3"
+			bash l_mpi_oneapi_p_2021.2.0.215_offline.sh -s -a -s --eula accept
 			Verify_Result
 			LogMsg "Completed Intel MPI installation"
 
