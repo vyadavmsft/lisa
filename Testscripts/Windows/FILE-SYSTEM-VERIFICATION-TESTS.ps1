@@ -60,7 +60,12 @@ function New-FileShare {
     }
     $sharePassword = (Get-AzStorageAccountKey -ResourceGroupName $AllVmData.ResourceGroupName `
         -Name $storageAccountName).Value[0]
-    $shareHost = (Get-AzStorageShare -Context $storageAccount.Context).Uri.Host[0]
+    $share = Get-AzStorageShare -Context $storageAccount.Context
+    if ($null -eq $share) {
+        Write-LogErr "Failed to get the share."
+        return 1
+    }
+    $shareHost = $share.Uri.Host[0]
     $url_main = $shareHost + "/" + $fileShareName
     $url_scratch = $shareHost + "/" + $scratchName
     Add-Content -Value "TEST_DEV=//$url_main" -Path $xfstestsConfig
