@@ -183,7 +183,7 @@ function Install_Dpdk () {
 			fi
 			ssh ${1} "yum update -y --disablerepo='*' --enablerepo='*microsoft*'"
 			ssh "${1}" "yum -y groupinstall 'Infiniband Support' && dracut --add-drivers 'mlx4_en mlx4_ib mlx5_ib' -f && systemctl enable rdma"
-			check_exit_status "Install Infiniband Support on ${1}" "exit"
+			#check_exit_status "Install Infiniband Support on ${1}" "exit"
 			devel_source=(  "7.5=http://vault.centos.org/7.5.1804/updates/x86_64/Packages/kernel-devel-$(uname -r).rpm"
 			                "7.6=http://vault.centos.org/7.6.1810/updates/x86_64/Packages/kernel-devel-$(uname -r).rpm"
 			                "8.1=http://vault.centos.org//8.1.1911/BaseOS/x86_64/os/Packages/kernel-devel-$(uname -r).rpm" )
