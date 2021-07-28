@@ -147,7 +147,7 @@ function Main() {
     --smb_url  "${ARTIFACTS_SMB_URL}" \
     --smb_username "${ARTIFACTS_SMB_USERNAME}"  \
     --smb_password "${ARTIFACTS_SMB_PASSWORD}" \
-    --target_folder "kernel_artifacts" \
+    --target_folder "kernel_artifacts/$(date '+%F-%H-%M')" \
     --local_folder "$BASEDIR/lis-pipeline/scripts/package_building/upstream-kernel-artifacts" 
 
 	LogMsg "Main function of setup completed"

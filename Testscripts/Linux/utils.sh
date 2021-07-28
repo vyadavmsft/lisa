@@ -3911,7 +3911,7 @@ function upload_files_to_azfileshare(){
             --) shift; break ;;
             *) break ;;
         esac
-    done
+    done 
     random_string=`tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo ''`
     mount_point="/tmp/${random_string}"
     mkdir -p $mount_point
@@ -3921,7 +3921,7 @@ function upload_files_to_azfileshare(){
     if [ ! -e $mount_point/$target_folder ]
     then
         LogMsg "Path '$target_folder' doesn't exists on the smb share. Creating it.."
-        mkdir $mount_point/$target_folder
+        mkdir -p $mount_point/$target_folder
     fi
     LogMsg "Uploading files to ${smb_share_url}/$target_folder"
     sudo cp -vrf "$relpath/"* $mount_point/$target_folder
