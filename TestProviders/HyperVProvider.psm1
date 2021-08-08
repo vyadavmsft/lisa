@@ -63,7 +63,7 @@ Class HyperVProvider : TestProvider
 
 				# After successful deployment, configure the umask for Linux distro
 				$null = Configure-UmaskInVMs $allVMData $global:user $global:password
-				$null = Configure-GraceTimeInVMs $allVMData $global:user $global:password
+				$null = Configure-ClientAliveIntervalInVMs $allVMData $global:user $global:password
 
 				if ($TestCaseData.SetupConfig.OSType -notcontains "Windows") {
 					# After each successful deployment, update the $global:detectedDistro for reference by other scripts and logic

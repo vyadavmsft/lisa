@@ -571,10 +571,10 @@ Function Configure-UmaskInVMs($allVMData, $userName, $password){
     }
 }
 
-Function Configure-GraceTimeInVMs($allVMData, $userName, $password){
+Function Configure-ClientAliveIntervalInVMs($allVMData, $userName, $password){
     foreach ($vmData in $allVMData) {
         if (!$vmData.IsWindows) {
-            $Null = Run-LinuxCmd -ip $vmData.PublicIP -port $vmData.SSHPort -username $userName -password $password -runAsSudo -command "sed  -e '/LoginGraceTime.*/ s/^#*/#/' -i /etc/ssh/sshd_config"
+            $Null = Run-LinuxCmd -ip $vmData.PublicIP -port $vmData.SSHPort -username $userName -password $password -runAsSudo -command "sed -i 's/.*ClientAliveInterval.*/ClientAliveInterval 120/g' /etc/ssh/sshd_config"
             $Null = Run-LinuxCmd -ip $vmData.PublicIP -port $vmData.SSHPort -username $userName -password $password -runAsSudo -command "systemctl restart sshd"
         }
     }
