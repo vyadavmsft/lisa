@@ -571,6 +571,15 @@ Function Configure-UmaskInVMs($allVMData, $userName, $password){
     }
 }
 
+Function Configure-GraceTimeInVMs($allVMData, $userName, $password){
+    foreach ($vmData in $allVMData) {
+        if (!$vmData.IsWindows) {
+            $Null = Run-LinuxCmd -ip $vmData.PublicIP -port $vmData.SSHPort -username $userName -password $password -runAsSudo -command "sed  -e '/LoginGraceTime.*/ s/^#*/#/' -i /etc/ssh/sshd_config"
+            $Null = Run-LinuxCmd -ip $vmData.PublicIP -port $vmData.SSHPort -username $userName -password $password -runAsSudo -command "systemctl restart sshd"
+        }
+    }
+}
+
 Function Provision-VMsForLisa($allVMData, $installPackagesOnRoleNames)
 {
 	$keysGenerated = $false
