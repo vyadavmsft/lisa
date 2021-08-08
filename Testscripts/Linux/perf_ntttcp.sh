@@ -253,8 +253,8 @@ Run_Ntttcp()
 	Kill_Process "${client}" ntttcp
 
 	# Disable firewalld
-	Run_SSHCommand "${client}" "service firewalld stop"
-	Run_SSHCommand "${server}" "service firewalld stop"
+	Run_SSHCommand "${client}" ". ${UTIL_FILE} && stop_firewall"
+	Run_SSHCommand "${server}" ". ${UTIL_FILE} && stop_firewall"
 
 	Run_SSHCommand "${server}" "mkdir -p ${log_folder}"
 	Run_SSHCommand "${client}" "mkdir -p ${log_folder}"

@@ -3406,6 +3406,13 @@ function stop_firewall() {
 			if [ $? -ne 0 ]; then
 				return 1
 			fi
+			iptables -L || iptables -P INPUT ACCEPT
+			iptables -L || iptables -P FORWARD ACCEPT
+			iptables -L || iptables -P OUTPUT ACCEPT
+			iptables -L || iptables -t nat -F
+			iptables -L || iptables -t mangle -F
+			iptables -L || iptables -F
+			iptables -L || iptables -X
 			;;
 		redhat* | centos* | fedora* | almalinux* | mariner* | rockylinux*)
 			service firewalld stop || systemctl stop iptables
