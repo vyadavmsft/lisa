@@ -158,6 +158,8 @@ function Build_Kernel() {
     LogMsg "Start to make old config"
     make olddefconfig >> $LOG_FILE 2>&1
     check_exit_status "Make kernel config" "exit"
+	
+	scripts/config --disable SYSTEM_TRUSTED_KEYS
 
     LogMsg "Start to build kernel"
     make -j"$thread_number" >> $LOG_FILE 2>&1
