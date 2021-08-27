@@ -1,0 +1,37 @@
+name: azure kernel default
+variable:
+  - name: location
+    value: "westus2"
+  - name: keep_environment
+    value: "always"
+  - name: resource_group_name
+    value: ""
+  - name: marketplace_image
+    value: "redhat rhel 7_9 latest"
+  - name: deploy
+    value: true
+  - name: wait_delete
+    value: false
+notifier:
+  - type: html
+platform:
+  - type: azure
+    admin_private_key_file: $(admin_private_key_file)
+    keep_environment: $(keep_environment)
+    azure:
+      resource_group_name: $(resource_group_name)
+      deploy: $(deploy)
+      subscription_id: $(subscription_id)
+      wait_delete: $(wait_delete)
+
+transformer:
+  - type: azure_deploy
+    requirement:
+      azure:
+        marketplace: $(marketplace_image)
+      core_count: 16
+    enabled: true
+  - type: azure_vhd
+    resource_group_name: $(azure_deploy_resource_group_name)
+    rename:
+      azure_vhd_url: vhd
