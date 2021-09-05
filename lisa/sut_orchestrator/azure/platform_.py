@@ -1295,6 +1295,12 @@ class AzurePlatform(Platform):
         node_space.network_interface.data_path = search_space.SetSpace[
             schema.NetworkDataPath
         ](is_allow_set=True, items=[])
+        if resource_sku.location_info[0].zone_details:
+            zone_details = resource_sku.location_info[0].zone_details[0]
+            for sku_capability in zone_details.capabilities:
+                if "UltraSSDAvailable" == sku_capability.name:
+                    if eval(sku_capability.value) is True:
+                        print(resource_sku.location_info[0].zone_details[0])
         for sku_capability in resource_sku.capabilities:
             if resource_sku.family in ["standardLSv2Family"]:
                 node_space.features.add(
@@ -1342,6 +1348,21 @@ class AzurePlatform(Platform):
             elif name == "EphemeralOSDiskSupported":
                 if eval(sku_capability.value) is True:
                     node_space.disk.disk_type.add(schema.DiskType.Ephemeral)
+            elif name == "UltraSSDAvailable":
+                if eval(sku_capability.value) is True:
+                    if resource_sku.location_info:
+                        if resource_sku.location_info[0].zone_details:
+                            print(
+                                resource_sku.location_info[0]
+                                .zone_details[0]
+                                .additional_properties["Name"]
+                            )
+                        else:
+                            print(
+                                f"single vm for size {resource_sku.size} {resource_sku.name}"
+                            )
+                    else:
+                        print(resource_sku)
         # all nodes support following features
         node_space.features.update(
             [
