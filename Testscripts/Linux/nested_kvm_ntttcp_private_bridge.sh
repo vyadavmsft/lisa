@@ -136,7 +136,7 @@ Prepare_Client() {
 	Remote_Copy_Wrapper "root" $CLIENT_HOST_FWD_PORT "${CONSTANTS_FILE}" "put"
 	Log_Msg "Reboot the nested client VM" $log_file
 	Remote_Exec_Wrapper "root" $CLIENT_HOST_FWD_PORT "reboot"
-	sleep 20
+	sleep 120
 	Bring_Up_Nic_With_Private_Ip $CLIENT_IP_ADDR $CLIENT_HOST_FWD_PORT
 }
 
@@ -161,7 +161,7 @@ Prepare_Server() {
 	Remote_Copy_Wrapper "root" $SERVER_HOST_FWD_PORT "servermd5sum.log" "get"
 	Log_Msg "Reboot the nested server VM" $log_file
 	Remote_Exec_Wrapper "root" $SERVER_HOST_FWD_PORT "reboot"
-	sleep 20
+	sleep 120
 	Bring_Up_Nic_With_Private_Ip $SERVER_IP_ADDR $SERVER_HOST_FWD_PORT
 }
 
