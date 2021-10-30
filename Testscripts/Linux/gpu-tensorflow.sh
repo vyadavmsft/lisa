@@ -40,6 +40,11 @@ InstallCUDAToolKit() {
 
     ubuntu*)
         GetOSVersion
+        # Temporary fix till driver for ubuntu19 and ubuntu20 series list under http://developer.download.nvidia.com/compute/cuda/repos/
+		if [[ $os_RELEASE =~ 19.* ]] || [[ $os_RELEASE =~ 20.* ]] || [[ $os_RELEASE =~ 21.* ]]; then
+			LogMsg "There is no cuda driver for $os_RELEASE, used the one for 18.10"
+			os_RELEASE="18.10"
+		fi
         CUDA_REPO_PKG="cuda-repo-ubuntu${os_RELEASE//./}_${CUDADriverVersion}_amd64.deb"
         LogMsg "Using ${CUDA_REPO_PKG}"
 
@@ -75,7 +80,7 @@ Prepare_Test_Dependencies() {
         dpkg_configure
     fi
     update_repos
-    packages=("wget" "python3" "git" "python-pip")
+    packages=("wget" "python3" "git" "python3-pip")
     install_package "${packages[@]}"
 
     # Install all CUDA Toolkit packages required to develop CUDA applications.
