@@ -50,6 +50,21 @@ function install_prereq_1804() {
     install_package "clang-7 libssl-dev gdb libsgx-enclave-common libsgx-enclave-common-dev libprotobuf10 libsgx-dcap-ql libsgx-dcap-ql-dev az-dcap-client open-enclave"
 }
 
+function install_prereq_2004() {
+    echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+    wget -qO - https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
+
+    echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal main" | sudo tee /etc/apt/sources.list.d/llvm-toolchain-focal.list
+    wget -qO - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+
+    echo "deb [arch=amd64] https://packages.microsoft.com/ubuntu/20.04/prod focal main" | sudo tee /etc/apt/sources.list.d/msprod.list
+    wget -qO - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+    sudo apt-get update
+
+    echo "----- Install Open Enclave packages and dependencies -----"
+    install_package "clang-7 libssl-dev gdb libsgx-enclave-common libsgx-enclave-common-dev libprotobuf10 libsgx-dcap-ql libsgx-dcap-ql-dev az-dcap-client open-enclave"
+}
+
 install_azure_dcap_client() {
     #Follows guide at https://github.com/intel/SGXDataCenterAttestationPrimitives.git
     #======================================
