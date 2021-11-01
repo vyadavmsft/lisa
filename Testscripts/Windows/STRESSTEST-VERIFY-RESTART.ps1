@@ -30,6 +30,10 @@ function Main {
         }
         if ($paramName -eq "type") {
             $testType = $paramValue
+            $expectedGPUBridgeCount = 0
+            if ($allVMData.InstanceSize -imatch "Standard_ND96") {
+                $expectedGPUBridgeCount = 6
+            }
             $expectedCount,$keyWord = Get-ExpectedDevicesCount -vmData $AllVmData -username $user -password $password -type $testType
             Run-LinuxCmd -ip $AllVmData.PublicIP -port $AllVmData.SSHPort -username $user -password $password -command "which lspci || (. ./utils.sh && install_package pciutils)" -runAsSudo | Out-Null
         }
@@ -60,8 +64,8 @@ function Main {
                     } else {
                         if ($testType) {
                             $pciDevices = Run-LinuxCmd -ip $AllVmData.PublicIP -port $AllVmData.SSHPort -username $user -password $password -command "lspci | grep -i '$keyWord' | wc -l" -runAsSudo -ignoreLinuxExitCode
-                            Write-LogInfo "Actual count: $pciDevices, expected count: $expectedCount"
-                            if ($pciDevices -ne $expectedCount) {
+                            Write-LogInfo "Actual count: $pciDevices, expected count: ($expectedCount + $expectedGPUBridgeCount)"
+                            if ($pciDevices -ne ($expectedCount + $expectedGPUBridgeCount)) {
                                 $CurrentTestResult.TestSummary += New-ResultSummary -testResult "FAIL" `
                                     -metaData "The $rebootNr Reboot: lspci return values are not expected" -checkValues "PASS,FAIL,ABORTED" -testName $currentTestData.testName
                                 $testResult = $ResultFail
