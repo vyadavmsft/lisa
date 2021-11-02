@@ -58,8 +58,8 @@ function skip_test() {
 				fi
 			fi
 			if [[ $DISTRO == "ubuntu_x" ]]; then
-				# skip other ubuntu version than 16.04, 18.04, 20.04, 21.04
-				if [[ $VERSION_ID != "16.04" && $VERSION_ID != "18.04" && $VERSION_ID != "20.04" && $VERSION_ID != "21.04" ]]; then
+				# skip other ubuntu version than 16.04, 18.04, 20.04, 21.04, 21.10
+				if [[ $VERSION_ID != "16.04" && $VERSION_ID != "18.04" && $VERSION_ID != "20.04" && $VERSION_ID != "21.04" && $VERSION_ID != "21.10" ]]; then
 					unsupport_flag=1
 				fi
 			fi
