@@ -547,9 +547,9 @@ function detect_ib_interface() {
 		for ib_name in ${ib_ifcs};do
 			ipaddr=$(ssh root@${vm} ip addr show $ib_name | awk -F ' *|:' '/inet /{print $3}' | cut -d / -f 1)
 			if [[ $? -eq 0 && ${ipaddr} ]]; then
-				LogMsg "Successfully queried $ib_name interface address, $ib from ${vm}."
+				LogMsg "Successfully queried $ib_name interface address, $ipaddr from ${vm}."
 			else
-				LogErr "Failed to query $ib_name interface address, $ib from ${vm}."
+				LogErr "Failed to query $ib_name interface address, $ipaddr from ${vm}."
 				final_pingpong_state=$(($final_pingpong_state + 1))
 				found_ib_interface=0
 			fi
