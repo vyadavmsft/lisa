@@ -11,7 +11,7 @@ remote_user="root"
 if [ ! -e sriov_constants.sh ]; then
     cp /${remote_user}/sriov_constants.sh .
 fi
-# Source SR-IOV_Utils.sh. This is the script that contains all the 
+# Source SR-IOV_Utils.sh. This is the script that contains all the
 # SR-IOV basic functions (checking drivers, checking VFs, assigning IPs)
 . SR-IOV-Utils.sh || {
     echo "ERROR: unable to source SR-IOV_Utils.sh!"
@@ -60,7 +60,7 @@ else
 fi
 LogMsg "Virtual function found: $vf_interface"
 # Extract module name
-module_name_in_use=$(lspci -vvv | grep -i kernel | tail -1 | awk '{print $NF}')
+module_name_in_use=$(lspci -vvv | grep -i kernel | grep mlx | tail -1 | awk '{print $NF}')
 mlnx_sts=$(echo "$module_name_in_use" | grep -c mlx)
 # If it's a Mellanox module, we first need to put down mlx_en module
 if [ "$mlnx_sts" -eq 1 ]; then
