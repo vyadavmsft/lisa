@@ -1330,7 +1330,7 @@ Function Invoke-AllResourceGroupDeployments($SetupTypeData, $CurrentTestData, $R
 			#region virtualMachines
 			Write-LogInfo "Adding Virtual Machine $vmName"
 			Add-Content -Value "$($indents[2]){" -Path $jsonFile
-			Add-Content -Value "$($indents[3])^apiVersion^: ^2020-12-01^," -Path $jsonFile
+			Add-Content -Value "$($indents[3])^apiVersion^: ^2021-03-01^," -Path $jsonFile
 			Add-Content -Value "$($indents[3])^type^: ^Microsoft.Compute/virtualMachines^," -Path $jsonFile
 			Add-Content -Value "$($indents[3])^name^: ^$vmName^," -Path $jsonFile
 			Add-Content -Value "$($indents[3])^location^: ^[variables('location')]^," -Path $jsonFile
@@ -1636,6 +1636,10 @@ Function Invoke-AllResourceGroupDeployments($SetupTypeData, $CurrentTestData, $R
 			Add-Content -Value "$($indents[4])," -Path $jsonFile
 			#endregion
 
+			Add-Content -Value "$($indents[4])^additionalCapabilities^ : " -Path $jsonFile
+			Add-Content -Value "$($indents[4]){" -Path $jsonFile
+			Add-Content -Value "$($indents[5])^hibernationEnabled^: true" -Path $jsonFile
+			Add-Content -Value "$($indents[4])}," -Path $jsonFile
 			Write-LogInfo "Added Virtual Machine $vmName"
 
 			#region Network Profile
