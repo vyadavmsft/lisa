@@ -311,7 +311,7 @@
   <test>
     <testName>STRESS-POWER-HIBERNATE</testName>
     <testScript>Power-Hibernate.ps1</testScript>
-    <files>.\Testscripts\Linux\utils.sh,.\Testscripts\Linux\SetupHbKernel.sh</files>
+    <files>.\Testscripts\Linux\utils.sh,.\Testscripts\Linux\SetupHbKernel.sh,.\Testscripts\Linux\hibernation-setup-tool.sh</files>
     <TestParameters>
       <param>hb_url=HB_CUSTOM_KERNEL_URL</param>
       <param>hb_branch=HB_CUSTOM_KERNEL_BRANCH</param>
