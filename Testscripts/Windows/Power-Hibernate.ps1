@@ -93,7 +93,7 @@ function Main {
 			}
 		}
 		$testcommand = @"
-echo disk > /sys/power/state
+systemctl hibernate 
 "@
 		Set-Content "$LogDir\test.sh" $testcommand
 
