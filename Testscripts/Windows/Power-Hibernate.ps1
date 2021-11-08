@@ -115,7 +115,7 @@ echo disk > /sys/power/state
 			Write-LogDbg "state is $state"
 			if ($state -eq "TestCompleted") {
 				Write-LogInfo "hibernation-setup-tool.sh finished on $($VMData.RoleName)"
-				break
+				continue
 			} elseif ($state -eq "TestSkipped") {
 				Write-LogInfo "hibernation-setup-tool.sh finished with SKIPPED state!"
 				$resultArr = $resultSkipped
