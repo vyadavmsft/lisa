@@ -13,6 +13,7 @@
 # Source constants file and initialize most common variables
 UtilsInit
 
+update_repos
 install_package "git make gcc"
 git clone https://github.com/microsoft/hibernation-setup-tool
 pushd hibernation-setup-tool
