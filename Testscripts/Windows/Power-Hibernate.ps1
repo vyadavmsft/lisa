@@ -104,7 +104,7 @@ echo disk > /sys/power/state
 		}
 		#endregion
 
-		$env_setup = Run-LinuxCmd -ip $AllVMData.PublicIP -port $AllVMData.SSHPort -username $user -password $password -command "journalctl -u hibernation-setup-tool -b | grep -c 'Swap file for VM hibernation set up successfully'" -runAsSudo
+		$env_setup = Run-LinuxCmd -ip $AllVMData.PublicIP -port $AllVMData.SSHPort -username $user -password $password -command "journalctl -u hibernation-setup-tool -b | grep -c 'Swap file for VM hibernation set up successfully'" -runAsSudo -ignoreLinuxExitCode:$true
 		if([int]$env_setup -ge 1) {
 			Write-LogInfo "Environment has been set up..."
 		} else {
