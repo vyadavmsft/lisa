@@ -184,8 +184,20 @@ install_package "ethtool"
 				$tx_queue_count1 = Run-LinuxCmd -ip $AllVMData.PublicIP -port $AllVMData.SSHPort -username $user -password $password -command "ethtool -l $vfname | grep -i tx | tail -n 1 | cut -d ':' -f 2 | tr -d '[:space:]'" -runAsSudo
 				$interrupt_count1 = Run-LinuxCmd -ip $AllVMData.PublicIP -port $AllVMData.SSHPort -username $user -password $password -command "cat /proc/interrupts | grep -i mlx | grep -i msi | wc -l" -runAsSudo
 			}
-			# Hibernate the VM
-			Run-LinuxCmd -ip $AllVMData.PublicIP -port $AllVMData.SSHPort -username $user -password $password -command "/home/$user/test.sh" -runAsSudo -RunInBackground -ignoreLinuxExitCode:$true | Out-Null
+			$secretsFile = $env:Azure_Secrets_File
+			$XmlSecrets = [xml](Get-Content $secretsFile)
+			$ClientID = $XmlSecrets.secrets.SubscriptionServicePrincipalClientID
+			$TenantID = $XmlSecrets.secrets.SubscriptionServicePrincipalTenantID
+			$Key = $XmlSecrets.secrets.SubscriptionServicePrincipalKey
+			$SubID = $XmlSecrets.secrets.SubscriptionID
+			$Resource = "https://management.core.windows.net/"
+			$RequestAccessTokenUri = "https://login.microsoftonline.com/$TenantId/oauth2/token"
+			$body = "grant_type=client_credentials&client_id=$ClientId&client_secret=$ClientSecret&resource=$Resource"
+			$Token = Invoke-RestMethod -Method Post -Uri $RequestAccessTokenUri -Body $body -ContentType 'application/x-www-form-urlencoded'
+			$url="https://management.azure.com/subscriptions/$SubID/resourceGroups/$rgname/providers/Microsoft.Compute/virtualMachines/$vmName/deallocate?hibernate=true&api-version=2021-03-01"
+			Invoke-RestMethod -Method Post -Uri $url -Headers $Headers
+			# # Hibernate the VM
+			# Run-LinuxCmd -ip $AllVMData.PublicIP -port $AllVMData.SSHPort -username $user -password $password -command "/home/$user/test.sh" -runAsSudo -RunInBackground -ignoreLinuxExitCode:$true | Out-Null
 			Write-LogInfo "Sent hibernate command to the VM and continue checking its status in every 15 seconds until 20 minutes timeout"
 
 			# Verify the VM status
@@ -195,13 +207,13 @@ install_package "ethtool"
 			while ($sw.elapsed -lt $timeout) {
 				Wait-Time -seconds 15
 				$vmStatus = Get-AzVM -Name $vmName -ResourceGroupName $rgName -Status
-				if ($vmStatus.Statuses[1].DisplayStatus -eq "VM stopped") {
+				if ($vmStatus.Statuses[1].DisplayStatus -eq "VM deallocated") {
 					break
 				} else {
 					Write-LogInfo "VM status is not stopped. Waiting for 15 seconds..."
 				}
 			}
-			if ($vmStatus.Statuses[1].DisplayStatus -eq "VM stopped") {
+			if ($vmStatus.Statuses[1].DisplayStatus -eq "VM deallocated") {
 				Write-LogInfo "$($vmStatus.Statuses[1].DisplayStatus): Verified successfully VM status is stopped after hibernation command sent"
 			} else {
 				Write-LogErr "$($vmStatus.Statuses[1].DisplayStatus): Did not verify the VM status stopped after hibernation command sent"
@@ -218,6 +230,10 @@ install_package "ethtool"
 			$vmCount = $AllVMData.Count
 			while ($sw.elapsed -lt $timeout) {
 				Wait-Time -seconds 15
+				$AllVMData[0].PublicIP = (Get-AzPublicIpAddress -ResourceGroupName $rgName).IpAddress
+				if ($AllVMData[0].PublicIP -eq "Not Assigned") {
+					Continue
+				}
 				$state = Run-LinuxCmd -ip $AllVMData[0].PublicIP -port $AllVMData[0].SSHPort -username $user -password $password -command "date > /dev/null; echo $?"
 				Write-LogDbg "state is $state"
 				if ($state) {
