@@ -642,7 +642,9 @@ Function Invoke-AllResourceGroupDeployments($SetupTypeData, $CurrentTestData, $R
 		Add-Content -Value "$($indents[2])^defaultSubnet^: ^$defaultSubnetName^," -Path $jsonFile
 		Add-Content -Value "$($indents[2])^defaultSubnetID^: ^[concat(variables('vnetID'),'/subnets/', variables('defaultSubnet'))]^," -Path $jsonFile
 		Add-Content -Value "$($indents[2])^vnetID^: ^[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]^," -Path $jsonFile
-		Add-Content -Value "$($indents[2])^availabilitySetName^: ^$availabilitySetName^," -Path $jsonFile
+		if ($false) {
+			Add-Content -Value "$($indents[2])^availabilitySetName^: ^$availabilitySetName^," -Path $jsonFile
+		}
 		Add-Content -Value "$($indents[2])^lbName^: ^$LoadBalancerName^," -Path $jsonFile
 		Add-Content -Value "$($indents[2])^lbID^: ^[resourceId('Microsoft.Network/loadBalancers',variables('lbName'))]^," -Path $jsonFile
 		Add-Content -Value "$($indents[2])^frontEndIPv4ConfigID^: ^[concat(variables('lbID'),'/frontendIPConfigurations/LoadBalancerFrontEndIPv4')]^," -Path $jsonFile
@@ -663,42 +665,44 @@ Function Invoke-AllResourceGroupDeployments($SetupTypeData, $CurrentTestData, $R
 		#region Common Resources for all deployments..
 
 		#region availabilitySets
-		if (!$createAvailabilitySet) {
-			Write-LogInfo "Using existing Availability Set: $availabilitySetName"
-		}
-		else {
-			Add-Content -Value "$($indents[2]){" -Path $jsonFile
-			Add-Content -Value "$($indents[3])^apiVersion^: ^$apiVersion^," -Path $jsonFile
-			Add-Content -Value "$($indents[3])^type^: ^Microsoft.Compute/availabilitySets^," -Path $jsonFile
-			Add-Content -Value "$($indents[3])^name^: ^[variables('availabilitySetName')]^," -Path $jsonFile
-			Add-Content -Value "$($indents[3])^location^: ^[variables('location')]^," -Path $jsonFile
-			if ($UseManagedDisks) {
-				Add-Content -Value "$($indents[3])^sku^:" -Path $jsonFile
-				Add-Content -Value "$($indents[3]){" -Path $jsonFile
-				Add-Content -Value "$($indents[4])^name^: ^Aligned^" -Path $jsonFile
-				Add-Content -Value "$($indents[3])}," -Path $jsonFile
+		if ($false) {
+			if (!$createAvailabilitySet) {
+				Write-LogInfo "Using existing Availability Set: $availabilitySetName"
 			}
-			if ($CurrentTestData.SetupConfig.TiPSessionId) {
-				Add-Content -Value "$($indents[3])^tags^:" -Path $jsonFile
-				Add-Content -Value "$($indents[3]){" -Path $jsonFile
-				Add-Content -Value "$($indents[4])^TipNode.SessionId^: ^$($CurrentTestData.SetupConfig.TiPSessionId)^" -Path $jsonFile
-				Add-Content -Value "$($indents[3])}," -Path $jsonFile
-			}
+			else {
+				Add-Content -Value "$($indents[2]){" -Path $jsonFile
+				Add-Content -Value "$($indents[3])^apiVersion^: ^$apiVersion^," -Path $jsonFile
+				Add-Content -Value "$($indents[3])^type^: ^Microsoft.Compute/availabilitySets^," -Path $jsonFile
+				Add-Content -Value "$($indents[3])^name^: ^[variables('availabilitySetName')]^," -Path $jsonFile
+				Add-Content -Value "$($indents[3])^location^: ^[variables('location')]^," -Path $jsonFile
+				if ($UseManagedDisks) {
+					Add-Content -Value "$($indents[3])^sku^:" -Path $jsonFile
+					Add-Content -Value "$($indents[3]){" -Path $jsonFile
+					Add-Content -Value "$($indents[4])^name^: ^Aligned^" -Path $jsonFile
+					Add-Content -Value "$($indents[3])}," -Path $jsonFile
+				}
+				if ($CurrentTestData.SetupConfig.TiPSessionId) {
+					Add-Content -Value "$($indents[3])^tags^:" -Path $jsonFile
+					Add-Content -Value "$($indents[3]){" -Path $jsonFile
+					Add-Content -Value "$($indents[4])^TipNode.SessionId^: ^$($CurrentTestData.SetupConfig.TiPSessionId)^" -Path $jsonFile
+					Add-Content -Value "$($indents[3])}," -Path $jsonFile
+				}
 
-			Add-Content -Value "$($indents[3])^properties^:" -Path $jsonFile
-			Add-Content -Value "$($indents[3]){" -Path $jsonFile
-			Add-Content -Value "$($indents[4])^platformFaultDomainCount^:$($CurrentTestData.SetupConfig.PlatformFaultDomainCount)," -Path $jsonFile
-			Add-Content -Value "$($indents[4])^platformUpdateDomainCount^:$($CurrentTestData.SetupConfig.PlatformUpdateDomainCount)" -Path $jsonFile
-			if ($CurrentTestData.SetupConfig.TiPCluster) {
-				Add-Content -Value "$($indents[4])," -Path $jsonFile
-				Add-Content -Value "$($indents[4])^internalData^:" -Path $jsonFile
-				Add-Content -Value "$($indents[4]){" -Path $jsonFile
-				Add-Content -Value "$($indents[5])^pinnedFabricCluster^ : ^$($CurrentTestData.SetupConfig.TiPCluster)^" -Path $jsonFile
-				Add-Content -Value "$($indents[4])}" -Path $jsonFile
+				Add-Content -Value "$($indents[3])^properties^:" -Path $jsonFile
+				Add-Content -Value "$($indents[3]){" -Path $jsonFile
+				Add-Content -Value "$($indents[4])^platformFaultDomainCount^:$($CurrentTestData.SetupConfig.PlatformFaultDomainCount)," -Path $jsonFile
+				Add-Content -Value "$($indents[4])^platformUpdateDomainCount^:$($CurrentTestData.SetupConfig.PlatformUpdateDomainCount)" -Path $jsonFile
+				if ($CurrentTestData.SetupConfig.TiPCluster) {
+					Add-Content -Value "$($indents[4])," -Path $jsonFile
+					Add-Content -Value "$($indents[4])^internalData^:" -Path $jsonFile
+					Add-Content -Value "$($indents[4]){" -Path $jsonFile
+					Add-Content -Value "$($indents[5])^pinnedFabricCluster^ : ^$($CurrentTestData.SetupConfig.TiPCluster)^" -Path $jsonFile
+					Add-Content -Value "$($indents[4])}" -Path $jsonFile
+				}
+				Add-Content -Value "$($indents[3])}" -Path $jsonFile
+				Add-Content -Value "$($indents[2])}," -Path $jsonFile
+				Write-LogInfo "Added availabilitySet $availabilitySetName.."
 			}
-			Add-Content -Value "$($indents[3])}" -Path $jsonFile
-			Add-Content -Value "$($indents[2])}," -Path $jsonFile
-			Write-LogInfo "Added availabilitySet $availabilitySetName.."
 		}
 		#endregion
 
@@ -1355,7 +1359,7 @@ Function Invoke-AllResourceGroupDeployments($SetupTypeData, $CurrentTestData, $R
 			Add-Content -Value "$($indents[3])^tags^: {^TestID^: ^$TestID^}," -Path $jsonFile
 			Add-Content -Value "$($indents[3])^dependsOn^: " -Path $jsonFile
 			Add-Content -Value "$($indents[3])[" -Path $jsonFile
-			if ($createAvailabilitySet) {
+			if ($createAvailabilitySet -and $false) {
 				Add-Content -Value "$($indents[4])^[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]^," -Path $jsonFile
 			}
 			if ($VHDName -and $UseManagedDisks ) {
@@ -1374,10 +1378,12 @@ Function Invoke-AllResourceGroupDeployments($SetupTypeData, $CurrentTestData, $R
 			Add-Content -Value "$($indents[3])^properties^:" -Path $jsonFile
 			Add-Content -Value "$($indents[3]){" -Path $jsonFile
 			#region availabilitySet
-			Add-Content -Value "$($indents[4])^availabilitySet^: " -Path $jsonFile
-			Add-Content -Value "$($indents[4]){" -Path $jsonFile
-			Add-Content -Value "$($indents[5])^id^: ^[resourceId('Microsoft.Compute/availabilitySets','$availabilitySetName')]^" -Path $jsonFile
-			Add-Content -Value "$($indents[4])}," -Path $jsonFile
+			if ($false) {
+				Add-Content -Value "$($indents[4])^availabilitySet^: " -Path $jsonFile
+				Add-Content -Value "$($indents[4]){" -Path $jsonFile
+				Add-Content -Value "$($indents[5])^id^: ^[resourceId('Microsoft.Compute/availabilitySets','$availabilitySetName')]^" -Path $jsonFile
+				Add-Content -Value "$($indents[4])}," -Path $jsonFile
+			}
 			#endregion
 
 			#region Hardware Profile
