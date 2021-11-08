@@ -2124,6 +2124,7 @@ function detect_linux_distribution() {
 function update_repos() {
 	case "$DISTRO_NAME" in
 		oracle|rhel|centos|almalinux|mariner|rockylinux)
+			install_epel
 			yum clean all
 			;;
 		ubuntu|debian)
