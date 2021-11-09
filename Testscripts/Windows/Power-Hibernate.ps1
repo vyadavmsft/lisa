@@ -337,6 +337,7 @@ install_package "ethtool"
 		}
 
 		$testResult = $resultPass
+		Run-LinuxCmd -ip $AllVMData.PublicIP -port $AllVMData.SSHPort -username $user -password $password -command "dmesg > dmesg.after.hibernate.log" -runAsSudo
 		Copy-RemoteFiles -downloadFrom $AllVMData.PublicIP -port $AllVMData.SSHPort -username $user -password $password -download -downloadTo $LogDir -files "*.log" -runAsSudo
 	} catch {
 		$ErrorMessage =  $_.Exception.Message
