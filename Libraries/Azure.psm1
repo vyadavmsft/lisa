@@ -143,12 +143,12 @@ Function Assert-ResourceLimitationForDeployment($RGXMLData, [ref]$TargetLocation
 		if ($CurrentTestData.SetupConfig.OsVHD -and $VMGeneration -and !$AllTestVMSizes.$testVMSize.Generations.Contains($VMGeneration)) {
 			$TargetLocation.Value = 'NOT_ENABLED'
 			#$overFlowErrors += 1
-			Write-LogErr "Requested VM size: '$testVMSize' with VM generation: '$VMGeneration' is NOT supported, this should be an Azure limitation temporarily, please try other VM Sizes that support HyperVGeneration '$VMGeneration'."
+			Write-LogInfo "Requested VM size: '$testVMSize' with VM generation: '$VMGeneration' is NOT supported, this should be an Azure limitation temporarily, please try other VM Sizes that support HyperVGeneration '$VMGeneration'."
 		}
 		elseif (!$AllTestVMSizes.$testVMSize.AvailableLocations) {
 			$TargetLocation.Value = 'NOT_ENABLED'
 			#$overFlowErrors += 1
-			Write-LogErr "Requested VM size: '$testVMSize' is NOT enabled from any region of current subscription, please open Azure Support Tickets for it."
+			Write-LogInfo "Requested VM size: '$testVMSize' is NOT enabled from any region of current subscription, please open Azure Support Tickets for it."
 		}
 		else {
 			$vmCPUs = $global:AllTestVMSizes.$testVMSize.vCPUs
@@ -305,7 +305,8 @@ Function Select-StorageAccountByTestLocation($CurrentTestData, [string]$Location
 		}
 	}
 	# update ARMStorageAccount value from '$global:GlobalConfig', in case Test Scripts use '$global:GlobalConfig.Global.Azure.Subscription.ARMStorageAccount' directly
-	$global:GlobalConfig.Global.Azure.Subscription.ARMStorageAccount = $targetStorageAccount
+	#$global:GlobalConfig.Global.Azure.Subscription.ARMStorageAccount = $targetStorageAccount
+	$global:GlobalConfig.Global.Azure.Subscription.ARMStorageAccount = 'lisacentralus'
 	Write-LogInfo "Using Location: '$Location', Storage Account: '$targetStorageAccount'"
 	return $targetStorageAccount
 }
