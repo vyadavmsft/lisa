@@ -184,12 +184,10 @@ install_package "ethtool"
 				$tx_queue_count1 = Run-LinuxCmd -ip $AllVMData.PublicIP -port $AllVMData.SSHPort -username $user -password $password -command "ethtool -l $vfname | grep -i tx | tail -n 1 | cut -d ':' -f 2 | tr -d '[:space:]'" -runAsSudo
 				$interrupt_count1 = Run-LinuxCmd -ip $AllVMData.PublicIP -port $AllVMData.SSHPort -username $user -password $password -command "cat /proc/interrupts | grep -i mlx | grep -i msi | wc -l" -runAsSudo
 			}
-			$secretsFile = $env:Azure_Secrets_File
-			$XmlSecrets = [xml](Get-Content $secretsFile)
-			$ClientID = $XmlSecrets.secrets.SubscriptionServicePrincipalClientID
-			$TenantID = $XmlSecrets.secrets.SubscriptionServicePrincipalTenantID
-			$Key = $XmlSecrets.secrets.SubscriptionServicePrincipalKey
-			$SubID = $XmlSecrets.secrets.SubscriptionID
+			$ClientID = $Global:XMLSecrets.secrets.SubscriptionServicePrincipalClientID
+			$TenantID = $Global:XMLSecrets.secrets.SubscriptionServicePrincipalTenantID
+			$ClientSecret = $Global:XMLSecrets.secrets.SubscriptionServicePrincipalKey
+			$SubID = $Global:XMLSecrets.secrets.SubscriptionID
 			$Resource = "https://management.core.windows.net/"
 			$RequestAccessTokenUri = "https://login.microsoftonline.com/$TenantId/oauth2/token"
 			$body = "grant_type=client_credentials&client_id=$ClientId&client_secret=$ClientSecret&resource=$Resource"
