@@ -192,6 +192,8 @@ install_package "ethtool"
 			$RequestAccessTokenUri = "https://login.microsoftonline.com/$TenantId/oauth2/token"
 			$body = "grant_type=client_credentials&client_id=$ClientId&client_secret=$ClientSecret&resource=$Resource"
 			$Token = Invoke-RestMethod -Method Post -Uri $RequestAccessTokenUri -Body $body -ContentType 'application/x-www-form-urlencoded'
+			$Headers = @{}
+			$Headers.Add("Authorization","$($Token.token_type) "+ " " + "$($Token.access_token)")
 			$url="https://management.azure.com/subscriptions/$SubID/resourceGroups/$rgname/providers/Microsoft.Compute/virtualMachines/$vmName/deallocate?hibernate=true&api-version=2021-03-01"
 			Invoke-RestMethod -Method Post -Uri $url -Headers $Headers
 			# # Hibernate the VM
