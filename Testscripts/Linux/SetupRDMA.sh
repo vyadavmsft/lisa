@@ -109,6 +109,9 @@ function Main() {
 	update_repos
 	# Install common packages
 	install_package "gcc git make zip python3 python3-setuptools"
+	if [ $DISTRO == 'centos_7' ]; then
+		install_package "fuse-libs"
+	fi
 	LogMsg "Installed the common required packages, gcc git make zip"
 	# Change memory limits
 	echo "* soft memlock unlimited" >> /etc/security/limits.conf
@@ -305,6 +308,10 @@ function Main() {
 			else
 				distro_version=${distro_version%.*}sp${VERSION_ID##*.}
 			fi
+		fi
+		if [[ $ID == "centos" ]]; then
+			distro_name="rhel"
+			distro_version=$mj.$mn
 		fi
 		# OFED driver for Ubuntu version conflicts to those 3 dependencies. Recommended to remove.
 		if [[ $ID == "ubuntu" ]]; then
