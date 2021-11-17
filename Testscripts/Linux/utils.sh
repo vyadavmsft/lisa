@@ -3550,7 +3550,8 @@ function Format_Mount_NVME() {
     install_package xfsprogs
     # Partition disk
     echo "Creating  partition on ${namespace} disk "
-    (echo n; echo p; echo 1; echo ; echo; echo ; echo w) | fdisk /dev/"${namespace}"
+    #(echo n; echo p; echo 1; echo ; echo; echo ; echo w) | fdisk /dev/"${namespace}"
+    (echo p; echo n; echo ; echo; echo ; echo w; echo p) | fdisk /dev/"${namespace}"
     check_exit_status "${namespace} partition creation"
     sleep 1
     # Create fileSystem
