@@ -3556,7 +3556,8 @@ function Format_Mount_NVME() {
     sleep 1
     # Create fileSystem
     echo "Creating ${filesystem} filesystem on ${namespace} disk "
-    echo "y" | mkfs."${filesystem}" -f "/dev/${namespace}p1"
+    #echo "y" | mkfs."${filesystem}" -f "/dev/${namespace}p1"
+    echo "y" | mkfs."${filesystem}" "/dev/${namespace}p1"
     check_exit_status "${filesystem} filesystem creation"
     sleep 1
     # Mount the disk

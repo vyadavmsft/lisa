@@ -48,30 +48,32 @@ for namespace in ${namespace_list}; do
         mdadm --zero-superblock /dev/nvme[0-9]n[0-9]p[0-9]
     fi
     sleep 1
+    Format_Mount_NVME "${namespace}" ext4
     # Partition disk
     #(echo n; echo p; echo 1; echo ; echo; echo ; echo w) | fdisk /dev/"$namespace"
-    (echo p; echo n; echo ; echo; echo ; echo w; echo p) | fdisk /dev/"$namespace"
-    if [ $? -ne 0 ]; then
-        LogErr "Failed to partition ${namespace} disk"
-        SetTestStateFailed
-        exit 0
-    fi
-    sleep 1
-    # Create fileSystem
-    echo "y" | mkfs.ext4 /dev/"$namespace"p1
-    if [ $? -ne 0 ]; then
-        LogErr "Failed to create ext4 filesystem on ${namespace}"
-        SetTestStateFailed
-        exit 0
-    fi
+    #(echo p; echo n; echo ; echo; echo ; echo w; echo p) | fdisk /dev/"$namespace"
+    #if [ $? -ne 0 ]; then
+    #    LogErr "Failed to partition ${namespace} disk"
+    #    SetTestStateFailed
+    #    exit 0
+    #fi
+    #sleep 1
+    ## Create fileSystem
+    #echo "y" | mkfs.ext4 /dev/"$namespace"p1
+    #if [ $? -ne 0 ]; then
+    #    LogErr "Failed to create ext4 filesystem on ${namespace}"
+    #    SetTestStateFailed
+    #    exit 0
+    #fi
+    
     # Mount the disk
-    mkdir "$namespace"
-    mount /dev/"$namespace"p1 "$namespace"
-    if [ $? -ne 0 ]; then
-        LogErr "Failed to mount ${namespace}p1"
-        SetTestStateFailed
-        exit 0
-    fi
+    #mkdir "$namespace"
+    #mount /dev/"$namespace"p1 "$namespace"
+    #if [ $? -ne 0 ]; then
+    #    LogErr "Failed to mount ${namespace}p1"
+    #    SetTestStateFailed
+    #    exit 0
+    #fi
     LogMsg "Successfully created partition on ${namespace} & mounted it!"
 
     # Create files on the partition
