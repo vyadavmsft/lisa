@@ -49,7 +49,8 @@ for namespace in ${namespace_list}; do
     fi
     sleep 1
     # Partition disk
-    (echo n; echo p; echo 1; echo ; echo; echo ; echo w) | fdisk /dev/"$namespace"
+    #(echo n; echo p; echo 1; echo ; echo; echo ; echo w) | fdisk /dev/"$namespace"
+    (echo p; echo n; echo ; echo; echo ; echo w; echo p) | fdisk /dev/"$namespace"
     if [ $? -ne 0 ]; then
         LogErr "Failed to partition ${namespace} disk"
         SetTestStateFailed
