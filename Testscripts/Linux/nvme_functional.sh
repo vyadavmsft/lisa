@@ -78,7 +78,7 @@ for namespace in ${namespace_list}; do
 
     # Create files on the partition
     echo "TestContent" > "$namespace"/testfile.txt
-    dd if=/dev/zero of="$namespace"/data bs=10M count=100
+    dd if=/dev/zero of="$namespace"/data bs=10M count=1
     if [ $? -ne 0 ]; then
         LogErr "Failed to create 1GB file on ${namespace}"
         SetTestStateFailed
