@@ -48,7 +48,7 @@ class KdumpCrash(TestSuite):
     # When with large system memory, the dump file can achieve more than 7G. It will
     # cost about 10min to copy dump file to disk for some distros, such as Ubuntu.
     # So we set the timeout time 800s to make sure the dump file is completed.
-    timeout_of_dump_crash = 800
+    timeout_of_dump_crash = 2000
     trigger_kdump_cmd = "echo c > /proc/sysrq-trigger"
     crash_kernel = "512M"
 
