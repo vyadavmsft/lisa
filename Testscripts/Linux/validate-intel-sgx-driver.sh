@@ -64,10 +64,11 @@ install_azure_dcap_client() {
     sudo chown -R $(whoami):$(whoami) ~/Azure-DCAP-Client/
  
     cd ~/Azure-DCAP-Client/
- 
+    sudo add-apt-repository ppa:team-xbmc/ppa -y
     sudo apt-get update -y
     sudo apt-get install -y libgtest-dev libcurl4-openssl-dev
     sudo apt-get install -y cmake
+    sudo apt-get install -y nlohmann-json3-dev
     cd /usr/src/gtest
     sudo cmake CMakeLists.txt
     sudo make
