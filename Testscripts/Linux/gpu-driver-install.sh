@@ -28,7 +28,7 @@ grid_driver="https://go.microsoft.com/fwlink/?linkid=874272"
 
 #######################################################################
 function skip_test() {
-	if [[ $driver == "CUDA" ]] && ([[ $DISTRO == *"suse"* ]] || [[ $DISTRO == "redhat_8" ]] || [[ $DISTRO == *"debian"* ]] || [[ $DISTRO == "almalinux_8" ]] || [[ $DISTRO == "rockylinux_8" ]]); then
+	if [[ $driver == "CUDA" ]] && ([[ $DISTRO == *"suse"* ]] || [[ $DISTRO == *"debian"* ]] || [[ $DISTRO == "almalinux_8" ]] || [[ $DISTRO == "rockylinux_8" ]]); then
 		LogMsg "$DISTRO not supported. Skip the test."
 		SetTestStateSkipped
 		exit 0
@@ -38,25 +38,11 @@ function skip_test() {
 	# Only support Ubuntu 16.04 LTS, 18.04 LTS, RHEL/CentOS 7.0 ~ 7.9, SLES 12 SP2
 	# Azure HPC team defines GRID driver support scope.
 	if [[ $driver == "GRID" ]]; then
-		support_distro="redhat_7 centos_7 ubuntu_x suse_12"
+		support_distro="redhat_7 centos_7 ubuntu_x suse_12 redhat_8 centos_8"
 		unsupport_flag=0
 		GetDistro
 		source /etc/os-release
 		if [[ "$support_distro" == *"$DISTRO"* ]]; then
-			if [[ $DISTRO == "redhat_7" ]]; then
-				# RHEL 7.x > 7.9 should be skipped
-				_minor_ver=$(echo $VERSION_ID | cut -d'.' -f 2)
-				if [[ $_minor_ver -gt 9 ]]; then
-					unsupport_flag=1
-				fi
-			fi
-			if [[ $DISTRO == "centos_7" ]]; then
-				# 7.x > 7.9 should be skipped
-				_minor_ver=$(cat /etc/centos-release | cut -d ' ' -f 4 | cut -d '.' -f 2)
-				if [[ $_minor_ver -gt 9 ]]; then
-					unsupport_flag=1
-				fi
-			fi
 			if [[ $DISTRO == "ubuntu_x" ]]; then
 				# skip other ubuntu version than 16.04, 18.04, 20.04, 21.04
 				if [[ $VERSION_ID != "16.04" && $VERSION_ID != "18.04" && $VERSION_ID != "20.04" && $VERSION_ID != "21.04" ]]; then
@@ -85,6 +71,18 @@ function skip_test() {
 function InstallCUDADrivers() {
 	LogMsg "Starting CUDA driver installation"
 	case $DISTRO in
+	redhat_8|centos_8)
+		wget http://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo -O /etc/yum.repos.d/cuda-rhel8.repo
+		yum update -y
+		yum --nogpgcheck -y install cuda-drivers > $HOME/install_drivers.log 2>&1
+		if [ $? -ne 0 ]; then
+			LogErr "Failed to install the cuda-drivers!"
+			SetTestStateAborted
+			return 1
+		else
+			LogMsg "Successfully installed cuda-drivers"
+		fi
+	;;
 	redhat_7|centos_7)
 		CUDA_REPO_PKG="cuda-repo-rhel7-${CUDADriverVersion}.x86_64.rpm"
 		LogMsg "Using ${CUDA_REPO_PKG}"
@@ -208,7 +206,7 @@ function install_gpu_requirements() {
 	LogMsg "installed wget lshw gcc make"
 
 	case $DISTRO in
-		redhat_7|centos_7|redhat_8|almalinux_8|rockylinux_8)
+		redhat_7|centos_7|centos_8|redhat_8|almalinux_8|rockylinux_8)
 			if [[ $DISTRO == "centos_7" ]]; then
 				# for all releases that are moved into vault.centos.org
 				# we have to update the repositories first
