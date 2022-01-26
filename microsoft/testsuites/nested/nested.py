@@ -7,10 +7,14 @@ from assertpy import assert_that
 
 from lisa import RemoteNode, TestCaseMetadata, TestSuite, TestSuiteMetadata
 from lisa.operating_system import Debian, Fedora, Suse
-from lisa.schema import Node
-from lisa.tools import Cat, Echo, Lscpu, Qemu, Sshpass, Wget
-from lisa.tools.df import Df, PartitionInfo
+from lisa.tools import Cat, Echo, Lscpu, Sshpass, Wget
 from lisa.util import SkippedException
+from microsoft.testsuites.nested.common import (
+    NESTED_VM_TEST_FILE_CONTENT,
+    NESTED_VM_TEST_FILE_NAME,
+    NESTED_VM_TEST_PUBLIC_FILE_URL,
+    connect_nested_vm,
+)
 
 
 @TestSuiteMetadata(
@@ -21,12 +25,6 @@ from lisa.util import SkippedException
     """,
 )
 class Nested(TestSuite):
-    NESTED_VM_IMAGE_NAME = "image.qcow2"
-    NESTED_VM_TEST_FILE_NAME = "message.txt"
-    NESTED_VM_TEST_FILE_CONTENT = "Message from L1 vm!!"
-    NESTED_VM_TEST_PUBLIC_FILE_URL = "http://www.github.com"
-    NESTED_VM_REQUIRED_DISK_SIZE_IN_GB = 6
-
     @TestCaseMetadata(
         description="""
         This test case will run basic tests on provisioned L2 vm.
@@ -72,7 +70,7 @@ class Nested(TestSuite):
             raise SkippedException("Nested image url should not be empty")
 
         # get l2 vm
-        l2_vm = self._connect_nested_vm(
+        l2_vm = connect_nested_vm(
             node,
             nested_image_username,
             nested_image_password,
@@ -82,83 +80,23 @@ class Nested(TestSuite):
 
         # verify file is correctly copied from L1 VM to L2 VM
         node.tools[Echo].write_to_file(
-            self.NESTED_VM_TEST_FILE_CONTENT,
-            node.get_pure_path(self.NESTED_VM_TEST_FILE_NAME),
+            NESTED_VM_TEST_FILE_CONTENT,
+            node.get_pure_path(NESTED_VM_TEST_FILE_NAME),
         )
         node.tools[Sshpass].copy(
-            self.NESTED_VM_TEST_FILE_NAME,
-            self.NESTED_VM_TEST_FILE_NAME,
+            NESTED_VM_TEST_FILE_NAME,
+            NESTED_VM_TEST_FILE_NAME,
             node.public_address,
             nested_image_username,
             nested_image_password,
             nested_image_port,
         )
 
-        uploaded_message = l2_vm.tools[Cat].read(self.NESTED_VM_TEST_FILE_NAME)
+        uploaded_message = l2_vm.tools[Cat].read(NESTED_VM_TEST_FILE_NAME)
         assert_that(
             uploaded_message,
             "Content of the file uploaded to L2 vm from L1 should match",
-        ).is_equal_to(self.NESTED_VM_TEST_FILE_CONTENT)
+        ).is_equal_to(NESTED_VM_TEST_FILE_CONTENT)
 
         # verify that files could be downloaded from internet on L2 VM
-        l2_vm.tools[Wget].get(self.NESTED_VM_TEST_PUBLIC_FILE_URL)
-
-    def _check_partition_capacity(
-        self,
-        partition: PartitionInfo,
-    ) -> bool:
-        # check if the partition has enough space to download nested image file
-        unused_partition_size_in_gb = (
-            partition.total_blocks - partition.used_blocks
-        ) / (1024 * 1024)
-        if unused_partition_size_in_gb > self.NESTED_VM_REQUIRED_DISK_SIZE_IN_GB:
-            return True
-
-        return False
-
-    def _get_partition_for_nested_image(self, node: RemoteNode) -> str:
-        home_partition = node.tools[Df].get_partition_by_mountpoint("/home")
-        if home_partition and self._check_partition_capacity(home_partition):
-            return home_partition.mountpoint
-
-        mnt_partition = node.tools[Df].get_partition_by_mountpoint("/mnt")
-        if mnt_partition and self._check_partition_capacity(mnt_partition):
-            return mnt_partition.mountpoint
-
-        raise SkippedException(
-            "No partition with Required disk space of "
-            f"{self.NESTED_VM_REQUIRED_DISK_SIZE_IN_GB}GB found"
-        )
-
-    def _connect_nested_vm(
-        self,
-        host: RemoteNode,
-        guest_username: str,
-        guest_password: str,
-        guest_port: int,
-        guest_image_url: str,
-    ) -> RemoteNode:
-        image_folder_path = self._get_partition_for_nested_image(host)
-        host.tools[Wget].get(
-            url=guest_image_url,
-            file_path=image_folder_path,
-            filename=self.NESTED_VM_IMAGE_NAME,
-            sudo=True,
-        )
-
-        # start nested vm
-        host.tools[Qemu].create_vm(
-            guest_port, f"{image_folder_path}/{self.NESTED_VM_IMAGE_NAME}"
-        )
-
-        # setup connection to nested vm
-        nested_vm = RemoteNode(Node(name="L2-vm"), 0, "L2-vm")
-        nested_vm.set_connection_info(
-            public_address=host.public_address,
-            username=guest_username,
-            password=guest_password,
-            public_port=guest_port,
-            port=guest_port,
-        )
-
-        return nested_vm
+        l2_vm.tools[Wget].get(NESTED_VM_TEST_PUBLIC_FILE_URL)
