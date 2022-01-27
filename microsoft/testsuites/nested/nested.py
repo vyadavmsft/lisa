@@ -6,14 +6,13 @@ from typing import Any, Dict
 from assertpy import assert_that
 
 from lisa import RemoteNode, TestCaseMetadata, TestSuite, TestSuiteMetadata
-from lisa.operating_system import Debian, Fedora, Suse
-from lisa.tools import Cat, Echo, Lscpu, Sshpass, Wget
-from lisa.util import SkippedException
+from lisa.tools import Cat, Echo, Sshpass, Wget
 from microsoft.testsuites.nested.common import (
     NESTED_VM_TEST_FILE_CONTENT,
     NESTED_VM_TEST_FILE_NAME,
     NESTED_VM_TEST_PUBLIC_FILE_URL,
     connect_nested_vm,
+    parse_nested_image_variables,
 )
 
 
@@ -38,36 +37,13 @@ class Nested(TestSuite):
     def verify_nested_kvm_basic(
         self, node: RemoteNode, variables: Dict[str, Any]
     ) -> None:
-        # verify that virtualization is enabled in hardware
-        is_virtualization_enabled = node.tools[Lscpu].is_virtualization_enabled()
-        if not is_virtualization_enabled:
-            raise SkippedException("Virtualization is not enabled in hardware")
 
-        # verify os compatibility
-        if not (
-            isinstance(node.os, Debian)
-            or isinstance(node.os, Fedora)
-            or isinstance(node.os, Suse)
-        ):
-            raise SkippedException(
-                f"{node.os} is not supported. Currently the test could be "
-                "run on Debian, Fedora and Suse distros."
-            )
-
-        # fetch nested vm test variables
-        nested_image_username = variables.get("nested_image_username", "")
-        nested_image_password = variables.get("nested_image_password", "")
-        nested_image_port = 60024
-        nested_image_url = variables.get("nested_image_url", "")
-
-        if not nested_image_username:
-            raise SkippedException("Nested image username should not be empty")
-
-        if not nested_image_password:
-            raise SkippedException("Nested image password should not be empty")
-
-        if not nested_image_url:
-            raise SkippedException("Nested image url should not be empty")
+        (
+            nested_image_username,
+            nested_image_password,
+            nested_image_port,
+            nested_image_url,
+        ) = parse_nested_image_variables(variables)
 
         # get l2 vm
         l2_vm = connect_nested_vm(

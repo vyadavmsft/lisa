@@ -1,11 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from lisa import RemoteNode
+from lisa.operating_system import Debian, Fedora, Suse
 from lisa.schema import Node
-from lisa.tools import Qemu, Wget
+from lisa.tools import Lscpu, Qemu, Wget
 from lisa.tools.df import Df, PartitionInfo
 from lisa.util import SkippedException
 
@@ -26,6 +27,23 @@ def connect_nested_vm(
     image_size: int = NESTED_VM_REQUIRED_DISK_SIZE_IN_GB,
     disks: Optional[List[str]] = None,
 ) -> RemoteNode:
+
+    # verify that virtualization is enabled in hardware
+    is_virtualization_enabled = host.tools[Lscpu].is_virtualization_enabled()
+    if not is_virtualization_enabled:
+        raise SkippedException("Virtualization is not enabled in hardware")
+
+    # verify os compatibility
+    if not (
+        isinstance(host.os, Debian)
+        or isinstance(host.os, Fedora)
+        or isinstance(host.os, Suse)
+    ):
+        raise SkippedException(
+            f"{host.os} is not supported. Currently the test could be "
+            "run on Debian, Fedora and Suse distros."
+        )
+
     image_folder_path = get_partition_for_nested_image(host, image_size)
 
     host.tools[Wget].get(
@@ -77,3 +95,28 @@ def check_partition_capacity(
         return True
 
     return False
+
+
+def parse_nested_image_variables(
+    variables: Dict[str, Any]
+) -> Tuple[str, str, int, str]:
+    nested_image_username = variables.get("nested_image_username", "")
+    nested_image_password = variables.get("nested_image_password", "")
+    nested_image_port = 60024
+    nested_image_url = variables.get("nested_image_url", "")
+
+    if not nested_image_username:
+        raise SkippedException("Nested image username should not be empty")
+
+    if not nested_image_password:
+        raise SkippedException("Nested image password should not be empty")
+
+    if not nested_image_url:
+        raise SkippedException("Nested image url should not be empty")
+
+    return (
+        nested_image_username,
+        nested_image_password,
+        nested_image_port,
+        nested_image_url,
+    )
