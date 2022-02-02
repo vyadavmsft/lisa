@@ -3,13 +3,14 @@
 
 import json
 from decimal import Decimal
-from typing import List, Type, cast
+from typing import Any, Dict, List, Type, cast
 
 from lisa.executable import Tool
 from lisa.messages import (
     NetworkIperfSingleTCPPerformanceMessage,
     NetworkIperfUDPPerformanceMessage,
     TransportProtocol,
+    create_message,
 )
 from lisa.operating_system import Posix
 from lisa.util.process import ExecutableResult, Process
@@ -250,6 +251,8 @@ class Iperf3(Tool):
         server_result: str,
         client_result: str,
         buffer_length: int,
+        information: Dict[str, str],
+        test_case_name: str,
     ) -> NetworkIperfSingleTCPPerformanceMessage:
         server_json = json.loads(server_result)
         client_json = json.loads(client_result)
@@ -257,20 +260,28 @@ class Iperf3(Tool):
         for client_interval in client_json["intervals"]:
             streams = client_interval["streams"]
             congestion_windowsize_kb_total += streams[0]["snd_cwnd"]
-        message = NetworkIperfSingleTCPPerformanceMessage()
-        message.buffer_size_bytes = Decimal(buffer_length)
-        message.rx_throughput_in_gbps = (
+        other_fields: Dict[str, Any] = {}
+        other_fields["buffer_size_bytes"] = Decimal(buffer_length)
+        other_fields["rx_throughput_in_gbps"] = (
             server_json["end"]["sum_received"]["bits_per_second"] / 1000000000
         )
-        message.tx_throughput_in_gbps = (
+        other_fields["tx_throughput_in_gbps"] = (
             client_json["end"]["sum_received"]["bits_per_second"] / 1000000000
         )
-        message.congestion_windowsize_kb = (
+        other_fields["congestion_windowsize_kb"] = (
             congestion_windowsize_kb_total / len(client_json["intervals"]) / 1024
         )
         for client_stream in client_json["end"]["streams"]:
-            message.retransmitted_segments = client_stream["sender"]["retransmits"]
-        return message
+            other_fields["retransmitted_segments"] = client_stream["sender"][
+                "retransmits"
+            ]
+        return create_message(
+            NetworkIperfSingleTCPPerformanceMessage,
+            self.node,
+            information,
+            test_case_name,
+            other_fields,
+        )
 
     def create_iperf_udp_performance_message(
         self,
@@ -278,6 +289,8 @@ class Iperf3(Tool):
         client_result_list: List[ExecutableResult],
         buffer_length: int,
         connections_num: int,
+        information: Dict[str, str],
+        test_case_name: str,
     ) -> NetworkIperfUDPPerformanceMessage:
         client_udp_lost_list: List[Decimal] = []
         client_intervals_throughput_list: List[Decimal] = []
@@ -334,17 +347,23 @@ class Iperf3(Tool):
                     )
                 )
 
-        message = NetworkIperfUDPPerformanceMessage()
-        message.tx_throughput_in_gbps = Decimal(
+        other_fields: Dict[str, Any] = {}
+        other_fields["tx_throughput_in_gbps"] = Decimal(
             sum(client_throughput_list) / len(client_throughput_list)
         )
-        message.data_loss = Decimal(
+        other_fields["data_loss"] = Decimal(
             sum(client_udp_lost_list) / len(client_udp_lost_list)
         )
-        message.rx_throughput_in_gbps = Decimal(
+        other_fields["rx_throughput_in_gbps"] = Decimal(
             sum(server_throughput_list) / len(server_throughput_list)
         )
-        message.send_buffer_size = Decimal(buffer_length)
-        message.connections_num = connections_num
-        message.protocol_type = TransportProtocol.Udp
-        return message
+        other_fields["send_buffer_size"] = Decimal(buffer_length)
+        other_fields["connections_num"] = connections_num
+        other_fields["protocol_type"] = TransportProtocol.Udp
+        return create_message(
+            NetworkIperfUDPPerformanceMessage,
+            self.node,
+            information,
+            test_case_name,
+            other_fields,
+        )

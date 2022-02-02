@@ -2,10 +2,10 @@
 # Licensed under the MIT license.
 import re
 from decimal import Decimal
-from typing import List, cast
+from typing import Any, Dict, List, cast
 
 from lisa.executable import Tool
-from lisa.messages import NetworkPPSPerformanceMessage
+from lisa.messages import NetworkPPSPerformanceMessage, create_message
 from lisa.operating_system import Posix
 from lisa.util.process import ExecutableResult, Process
 
@@ -74,7 +74,11 @@ class Sar(Tool):
         )
 
     def create_pps_peformance_messages(
-        self, result: ExecutableResult
+        self,
+        result: ExecutableResult,
+        test_case_name: str,
+        information: Dict[str, str],
+        other_fields: Dict[str, Any],
     ) -> NetworkPPSPerformanceMessage:
         # IFACE: Name of the network interface for which statistics are reported.
         # rxpck/s: packet receiving rate (unit: packets/second)
@@ -103,14 +107,21 @@ class Sar(Tool):
             tx_rx_pps.append(
                 Decimal(temp.group("rxpck")) + Decimal(temp.group("txpck"))
             )
-        message = NetworkPPSPerformanceMessage()
-        message.rx_pps_maximum = max(rx_pps)
-        message.rx_pps_average = Decimal(sum(rx_pps) / len(rx_pps))
-        message.rx_pps_minimum = min(rx_pps)
-        message.tx_pps_maximum = max(tx_pps)
-        message.tx_pps_average = Decimal(sum(tx_pps) / len(tx_pps))
-        message.tx_pps_minimum = min(tx_pps)
-        message.rx_tx_pps_maximum = max(tx_rx_pps)
-        message.rx_tx_pps_average = Decimal(sum(tx_rx_pps) / len(tx_rx_pps))
-        message.rx_tx_pps_minimum = min(tx_rx_pps)
+        result_fields: Dict[str, Any] = {}
+        result_fields["rx_pps_maximum"] = max(rx_pps)
+        result_fields["rx_pps_average"] = Decimal(sum(rx_pps) / len(rx_pps))
+        result_fields["rx_pps_minimum"] = min(rx_pps)
+        result_fields["tx_pps_maximum"] = max(tx_pps)
+        result_fields["tx_pps_average"] = Decimal(sum(tx_pps) / len(tx_pps))
+        result_fields["tx_pps_minimum"] = min(tx_pps)
+        result_fields["rx_tx_pps_maximum"] = max(tx_rx_pps)
+        result_fields["rx_tx_pps_average"] = Decimal(sum(tx_rx_pps) / len(tx_rx_pps))
+        result_fields["rx_tx_pps_minimum"] = min(tx_rx_pps)
+        message = create_message(
+            NetworkPPSPerformanceMessage,
+            self.node,
+            information,
+            test_case_name,
+            other_fields.update(result_fields),
+        )
         return message

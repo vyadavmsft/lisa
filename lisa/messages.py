@@ -2,11 +2,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Dict, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, TypeVar
 
+from lisa.schema import NetworkDataPath
 from lisa.util import constants, dict_to_fields
 
-T = TypeVar("T")
+if TYPE_CHECKING:
+    from lisa import Node
 
 
 @dataclass
@@ -64,6 +66,8 @@ class PerfMessage(MessageBase):
     data_path: str = ""
     test_date: datetime = datetime.utcnow()
 
+
+T = TypeVar("T", bound=PerfMessage)
 
 DiskSetupType = Enum(
     "DiskSetupType",
@@ -174,7 +178,24 @@ class NetworkIperfUDPPerformanceMessage(NetworkNtttcpUDPPerformanceMessage):
     pass
 
 
-def create_message_list(messages: List[T], information: Dict[str, str]) -> List[T]:
-    for message in messages:
-        dict_to_fields(information, message)
-    return messages
+def create_message(
+    message_type: Type[T],
+    node: "Node",
+    information: Dict[str, str],
+    test_case_name: str = "",
+    other_fields: Optional[Dict[str, Any]] = None,
+) -> T:
+    data_path: str = ""
+    assert (
+        node.capability.network_interface
+        and node.capability.network_interface.data_path
+    )
+    if isinstance(node.capability.network_interface.data_path, NetworkDataPath):
+        data_path = node.capability.network_interface.data_path.value
+    message = message_type()
+    dict_to_fields(information, message)
+    message.test_case_name = test_case_name
+    message.data_path = data_path
+    if other_fields:
+        dict_to_fields(other_fields, message)
+    return message

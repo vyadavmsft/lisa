@@ -7,9 +7,9 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, cast
 
 from lisa.executable import Tool
-from lisa.messages import DiskPerformanceMessage
+from lisa.messages import DiskPerformanceMessage, create_message
 from lisa.operating_system import Debian, Posix, Redhat, Suse
-from lisa.util import LisaException, dict_to_fields
+from lisa.util import LisaException
 
 from .git import Git
 
@@ -121,7 +121,11 @@ class Fio(Tool):
         return fio_result
 
     def create_performance_messages(
-        self, fio_results_list: List[FIOResult]
+        self,
+        fio_results_list: List[FIOResult],
+        test_name: str,
+        information: Dict[str, str],
+        other_fields: Optional[Dict[str, Any]] = None,
     ) -> List[DiskPerformanceMessage]:
         fio_message: List[DiskPerformanceMessage] = []
         mode_iops_latency: Dict[int, Dict[str, Any]] = {}
@@ -137,8 +141,16 @@ class Fio(Tool):
             mode_iops_latency[fio_result.qdepth] = temp
 
         for result in mode_iops_latency.values():
-            fio_result_message = DiskPerformanceMessage()
-            fio_result_message = dict_to_fields(result, fio_result_message)
+            result_copy = result.copy()
+            if other_fields:
+                result_copy.update(other_fields)
+            fio_result_message = create_message(
+                DiskPerformanceMessage,
+                self.node,
+                information,
+                test_name,
+                result_copy,
+            )
             fio_message.append(fio_result_message)
         return fio_message
 

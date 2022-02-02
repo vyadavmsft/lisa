@@ -3,13 +3,14 @@
 
 import re
 from decimal import Decimal
-from typing import List, Type
+from typing import Any, Dict, List, Type
 
 from lisa.executable import Tool
 from lisa.messages import (
     NetworkNtttcpTCPPerformanceMessage,
     NetworkNtttcpUDPPerformanceMessage,
     TransportProtocol,
+    create_message,
 )
 from lisa.tools import Gcc, Git, Make
 from lisa.util.process import ExecutableResult, Process
@@ -314,20 +315,30 @@ class Ntttcp(Tool):
         latency: Decimal,
         connections_num: str,
         buffer_size: int,
+        information: Dict[str, str],
+        test_case_name: str,
     ) -> NetworkNtttcpTCPPerformanceMessage:
-        message = NetworkNtttcpTCPPerformanceMessage()
-        message.buffer_size = Decimal(buffer_size)
-        message.connections_created_time = int(client_result.connections_created_time)
-        message.connections_num = int(connections_num)
-        message.latency_us = latency
-        message.retrans_segments = int(client_result.retrans_segs)
-        message.throughput_in_gbps = client_result.throughput_in_gbps
-        message.rx_packets = server_result.rx_packets
-        message.tx_packets = client_result.tx_packets
-        message.pkts_interrupts = client_result.pkts_interrupt
-        message.sender_cycles_per_byte = client_result.cycles_per_byte
-        message.receiver_cycles_rer_byte = server_result.cycles_per_byte
-        return message
+        other_fields: Dict[str, Any] = {}
+        other_fields["buffer_size"] = Decimal(buffer_size)
+        other_fields["connections_created_time"] = int(
+            client_result.connections_created_time
+        )
+        other_fields["connections_num"] = int(connections_num)
+        other_fields["latency_us"] = latency
+        other_fields["retrans_segments"] = int(client_result.retrans_segs)
+        other_fields["throughput_in_gbps"] = client_result.throughput_in_gbps
+        other_fields["rx_packets"] = server_result.rx_packets
+        other_fields["tx_packets"] = client_result.tx_packets
+        other_fields["pkts_interrupts"] = client_result.pkts_interrupt
+        other_fields["sender_cycles_per_byte"] = client_result.cycles_per_byte
+        other_fields["receiver_cycles_rer_byte"] = server_result.cycles_per_byte
+        return create_message(
+            NetworkNtttcpTCPPerformanceMessage,
+            self.node,
+            information,
+            test_case_name,
+            other_fields,
+        )
 
     def create_ntttcp_udp_performance_message(
         self,
@@ -335,18 +346,28 @@ class Ntttcp(Tool):
         client_result: NtttcpResult,
         connections_num: str,
         buffer_size: int,
+        information: Dict[str, str],
+        test_case_name: str,
     ) -> NetworkNtttcpUDPPerformanceMessage:
-        message = NetworkNtttcpUDPPerformanceMessage()
-        message.protocol_type = TransportProtocol.Udp
-        message.send_buffer_size = Decimal(buffer_size)
-        message.connections_created_time = int(client_result.connections_created_time)
-        message.connections_num = int(connections_num)
-        message.tx_throughput_in_gbps = client_result.throughput_in_gbps
-        message.rx_throughput_in_gbps = server_result.throughput_in_gbps
-        message.receiver_cycles_rer_byte = server_result.cycles_per_byte
-        message.data_loss = (
-            100
-            * (message.tx_throughput_in_gbps - message.rx_throughput_in_gbps)
-            / message.tx_throughput_in_gbps
+        other_fields: Dict[str, Any] = {}
+        other_fields["protocol_type"] = TransportProtocol.Udp
+        other_fields["send_buffer_size"] = Decimal(buffer_size)
+        other_fields["connections_created_time"] = int(
+            client_result.connections_created_time
         )
-        return message
+        other_fields["connections_num"] = int(connections_num)
+        other_fields["tx_throughput_in_gbps"] = client_result.throughput_in_gbps
+        other_fields["rx_throughput_in_gbps"] = server_result.throughput_in_gbps
+        other_fields["receiver_cycles_rer_byte"] = server_result.cycles_per_byte
+        other_fields["data_loss"] = (
+            100
+            * (client_result.throughput_in_gbps - server_result.throughput_in_gbps)
+            / client_result.throughput_in_gbps
+        )
+        return create_message(
+            NetworkNtttcpUDPPerformanceMessage,
+            self.node,
+            information,
+            test_case_name,
+            other_fields,
+        )

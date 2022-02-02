@@ -5,12 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from lisa import Logger, Node, notifier
 from lisa.environment import Environment
-from lisa.messages import (
-    DiskPerformanceMessage,
-    DiskSetupType,
-    DiskType,
-    create_message_list,
-)
+from lisa.messages import DiskPerformanceMessage, DiskSetupType, DiskType
 from lisa.schema import NetworkDataPath
 from lisa.tools import FIOMODES, Fio, FIOResult, Kill, Sed, Sysctl
 
@@ -20,6 +15,12 @@ def run_perf_test(
     start_iodepth: int,
     max_iodepth: int,
     filename: str,
+    test_name: str,
+    core_count: int,
+    disk_count: int,
+    disk_setup_type: DiskSetupType,
+    disk_type: DiskType,
+    information: Dict[str, str],
     num_jobs: Optional[List[int]] = None,
     block_size: int = 4,
     time: int = 120,
@@ -27,7 +28,7 @@ def run_perf_test(
     numjob: int = 0,
     overwrite: bool = False,
     cwd: Optional[pathlib.PurePath] = None,
-) -> List[DiskPerformanceMessage]:
+) -> None:
     fio_result_list: List[FIOResult] = []
     fio = node.tools[Fio]
     numjobiterator = 0
@@ -53,43 +54,21 @@ def run_perf_test(
             iodepth = iodepth * 2
             numjobindex += 1
             numjobiterator += 1
+
+    other_fields: Dict[str, Any] = {}
+    other_fields["core_count"] = core_count
+    other_fields["disk_count"] = disk_count
+    other_fields["block_size"] = block_size
+    other_fields["disk_setup_type"] = disk_setup_type
+    other_fields["disk_type"] = disk_type
     fio_messages: List[DiskPerformanceMessage] = fio.create_performance_messages(
-        fio_result_list
+        fio_result_list,
+        test_name=test_name,
+        information=information,
+        other_fields=other_fields,
     )
-    return fio_messages
-
-
-def handle_and_send_back_results(
-    core_count: int,
-    disk_count: int,
-    environment: Environment,
-    disk_setup_type: DiskSetupType,
-    disk_type: DiskType,
-    test_case_name: str,
-    fio_messages: List[DiskPerformanceMessage],
-    block_size: int = 4,
-) -> None:
-    information: Dict[str, Any] = environment.get_information()
-    information["core_count"] = core_count
-    information["disk_count"] = disk_count
-    information["test_case_name"] = test_case_name
-    information["block_size"] = block_size
-    information["disk_setup_type"] = disk_setup_type
-    information["disk_type"] = disk_type
-    fio_messages = create_message_list(fio_messages, information)
     for fio_message in fio_messages:
         notifier.notify(fio_message)
-
-
-def get_nic_datapath(node: Node) -> str:
-    data_path: str = ""
-    assert (
-        node.capability.network_interface
-        and node.capability.network_interface.data_path
-    )
-    if isinstance(node.capability.network_interface.data_path, NetworkDataPath):
-        data_path = node.capability.network_interface.data_path.value
-    return data_path
 
 
 def restore_sysctl_setting(
@@ -123,6 +102,17 @@ def set_systemd_tasks_max(nodes: List[Node], log: Logger) -> None:
                 "no config file exist for systemd, either there is no systemd"
                 " service or the config file location is incorrect."
             )
+
+
+def get_nic_datapath(node: Node) -> str:
+    data_path: str = ""
+    assert (
+        node.capability.network_interface
+        and node.capability.network_interface.data_path
+    )
+    if isinstance(node.capability.network_interface.data_path, NetworkDataPath):
+        data_path = node.capability.network_interface.data_path.value
+    return data_path
 
 
 def cleanup_process(environment: Environment, process_name: str) -> None:

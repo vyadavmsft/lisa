@@ -3,10 +3,10 @@
 
 import re
 from decimal import Decimal
-from typing import List, Type, cast
+from typing import Any, Dict, List, Type, cast
 
 from lisa.executable import Tool
-from lisa.messages import NetworkLatencyPerformanceMessage
+from lisa.messages import NetworkLatencyPerformanceMessage, create_message
 from lisa.operating_system import Debian, Posix, Redhat, Suse
 from lisa.util import LisaException, find_patterns_groups_in_lines, get_datetime_path
 from lisa.util.process import ExecutableResult, Process
@@ -233,7 +233,7 @@ class Lagscope(Tool):
         return Decimal(matched_results.group("average_latency_us"))
 
     def create_latency_peformance_messages(
-        self, result: ExecutableResult
+        self, result: ExecutableResult, information: Dict[str, str], test_case_name: str
     ) -> List[NetworkLatencyPerformanceMessage]:
         matched_results = self._result_pattern.match(result.stdout)
         assert (
@@ -244,20 +244,31 @@ class Lagscope(Tool):
         )[0]
         perf_message_list: List[NetworkLatencyPerformanceMessage] = []
         for matched_result in all_matched_results:
-            message = NetworkLatencyPerformanceMessage()
-            message.min_latency_us = Decimal(matched_results.group("min_latency_us"))
-            message.max_latency_us = Decimal(matched_results.group("max_latency_us"))
-            message.average_latency_us = Decimal(
+            other_fields: Dict[str, Any] = {}
+            other_fields["min_latency_us"] = Decimal(
+                matched_results.group("min_latency_us")
+            )
+            other_fields["max_latency_us"] = Decimal(
+                matched_results.group("max_latency_us")
+            )
+            other_fields["average_latency_us"] = Decimal(
                 matched_results.group("average_latency_us")
             )
-            message.latency95_percentile_us = Decimal(
+            other_fields["latency95_percentile_us"] = Decimal(
                 matched_results.group("latency95_percentile_us")
             )
-            message.latency99_percentile_us = Decimal(
+            other_fields["latency99_percentile_us"] = Decimal(
                 matched_results.group("latency99_percentile_us")
             )
-            message.frequency = int(matched_result["frequency"])
-            message.interval_us = int(matched_result["interval_us"])
+            other_fields["frequency"] = int(matched_result["frequency"])
+            other_fields["interval_us"] = int(matched_result["interval_us"])
+            message = create_message(
+                NetworkLatencyPerformanceMessage,
+                self.node,
+                information,
+                test_case_name,
+                other_fields,
+            )
             perf_message_list.append(message)
         return perf_message_list
 

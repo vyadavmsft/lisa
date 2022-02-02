@@ -14,7 +14,6 @@ from lisa import (
 )
 from lisa.environment import Environment
 from lisa.features import Sriov, Synthetic
-from lisa.messages import create_message_list
 from lisa.schema import NetworkDataPath
 from lisa.tools import Iperf3, Lagscope, Lscpu, Netperf, Ntttcp, Sar, Ssh, Sysctl
 from lisa.tools.iperf3 import (
@@ -24,7 +23,6 @@ from lisa.tools.iperf3 import (
     IPERF_UDP_CONCURRENCY,
 )
 from lisa.tools.ntttcp import NTTTCP_TCP_CONCURRENCY, NTTTCP_UDP_CONCURRENCY
-from lisa.util import dict_to_fields
 from lisa.util.process import ExecutableResult, Process
 from microsoft.testsuites.network.common import stop_firewall
 from microsoft.testsuites.performance.common import (
@@ -280,7 +278,6 @@ class NetworkPerformace(TestSuite):
         #  additional power consumption.
         sys_list = ["net.core.busy_poll", "net.core.busy_read"]
         try:
-            test_case_name = inspect.stack()[1][3]
             client_lagscope = client.tools[Lagscope]
             server_lagscope = server.tools[Lagscope]
             for node in [client, server]:
@@ -292,14 +289,9 @@ class NetworkPerformace(TestSuite):
             stop_firewall(environment)
             server_lagscope.run_as_server(ip=server.internal_address)
             latency_perf_messages = client_lagscope.create_latency_peformance_messages(
-                client_lagscope.run_as_client(server_ip=server.internal_address)
-            )
-            data_path = get_nic_datapath(client)
-            information: Dict[str, str] = environment.get_information()
-            information["test_case_name"] = test_case_name
-            information["data_path"] = data_path
-            latency_perf_messages = create_message_list(
-                latency_perf_messages, information
+                client_lagscope.run_as_client(server_ip=server.internal_address),
+                environment.get_information(),
+                inspect.stack()[1][3],
             )
             for latency_perf_message in latency_perf_messages:
                 notifier.notify(latency_perf_message)
@@ -331,13 +323,11 @@ class NetworkPerformace(TestSuite):
         server_sar = server.tools[Sar]
         server_sar.get_statistics_async()
         result = client_sar.get_statistics()
-        pps_message = client_sar.create_pps_peformance_messages(result)
-        pps_message.test_type = test_type
-        data_path = get_nic_datapath(client)
-        information: Dict[str, str] = environment.get_information()
-        pps_message = dict_to_fields(information, pps_message)
-        pps_message.test_case_name = inspect.stack()[1][3]
-        pps_message.data_path = data_path
+        other_fields: Dict[str, Any] = {}
+        other_fields["test_type"] = test_type
+        pps_message = client_sar.create_pps_peformance_messages(
+            result, inspect.stack()[1][3], environment.get_information(), other_fields
+        )
         notifier.notify(pps_message)
 
     def perf_ntttcp(
@@ -447,6 +437,8 @@ class NetworkPerformace(TestSuite):
                             client_result_temp,
                             str(test_thread),
                             buffer_size,
+                            environment.get_information(),
+                            test_case_name,
                         )
                     )
                 else:
@@ -457,15 +449,10 @@ class NetworkPerformace(TestSuite):
                             client_average_latency,
                             str(test_thread),
                             buffer_size,
+                            environment.get_information(),
+                            test_case_name,
                         )
                     )
-            information: Dict[str, str] = environment.get_information()
-            information["test_case_name"] = test_case_name
-            information["data_path"] = data_path
-            perf_ntttcp_message_list = create_message_list(
-                perf_ntttcp_message_list,
-                information,
-            )
             for ntttcp_message in perf_ntttcp_message_list:
                 notifier.notify(ntttcp_message)
         finally:
@@ -480,9 +467,10 @@ class NetworkPerformace(TestSuite):
     ) -> None:
         client = cast(RemoteNode, environment.nodes[0])
         server = cast(RemoteNode, environment.nodes[1])
-        test_case_name = inspect.stack()[1][3]
         client_iperf3 = client.tools[Iperf3]
         server_iperf3 = server.tools[Iperf3]
+        test_case_name = inspect.stack()[1][3]
+        information = environment.get_information()
         iperf3_messages_list: List[Any] = []
         if udp_mode:
             for node in [client, server]:
@@ -543,6 +531,8 @@ class NetworkPerformace(TestSuite):
                             client_result_list,
                             buffer_length,
                             connection,
+                            information,
+                            test_case_name,
                         )
                     )
                 else:
@@ -551,11 +541,9 @@ class NetworkPerformace(TestSuite):
                             server_result_list[0].stdout,
                             client_result_list[0].stdout,
                             buffer_length,
+                            information,
+                            test_case_name,
                         )
                     )
-        information: Dict[str, str] = environment.get_information()
-        information["data_path"] = get_nic_datapath(client)
-        information["test_case_name"] = test_case_name
-        iperf3_messages_list = create_message_list(iperf3_messages_list, information)
         for iperf3_message in iperf3_messages_list:
             notifier.notify(iperf3_message)
