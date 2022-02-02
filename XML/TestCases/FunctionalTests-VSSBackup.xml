@@ -126,7 +126,7 @@
     <cleanupScript>.\TestScripts\Windows\CLEANUP-Backup-DISK.ps1</cleanupScript>
     <files>.\Testscripts\Linux\STOR_VSS_Check_VSS_Daemon.sh,.\Testscripts\Linux\STOR_VSS_Disk_Stress.sh,.\Testscripts\Linux\utils.sh</files>
     <TestParameters>
-      <param>iozoneVers=3_424</param>
+      <param>iozoneVers=3_492</param>
       <param>iozonesrclink="IOZONE_SRC_URL"</param>
     </TestParameters>
     <Platform>HyperV</Platform>
